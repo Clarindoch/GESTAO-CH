@@ -1864,6 +1864,7 @@ function verCliente(id){
         return ' <span style="'+cor+'">&#128065; '+txt+'</span>';
       }())+'</div>'
       +(s.obs?'<div style="font-size:11px;color:var(--dim);font-style:italic;margin-top:1px">'+s.obs+'</div>':'')
+      +badgesPrazoServico(s)
       +'</div>'
       +'<span style="padding:2px 9px;border-radius:99px;font-size:11px;font-weight:700;background:'+st.bg+';color:'+st.cor+';border:1px solid '+st.cor+'33;flex-shrink:0;white-space:nowrap">'+st.l+'</span>'
       +'</div>'
@@ -2530,6 +2531,67 @@ function diasDesde(dataStr){
   d.setHours(0,0,0,0);
   var h = new Date(); h.setHours(0,0,0,0);
   return Math.max(0, Math.floor((h-d)/86400000));
+}
+
+function badgesPrazoServico(s){
+  // Retorna HTML com badges de status/prazo para mostrar no card do servico
+  var badges = [];
+
+  if(s.status === 'aguardando_cli'){
+    var dias = diasDesde(s.criado);
+    var restam = 7 - dias;
+    if(dias < 5){
+      badges.push('<span style="background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">&#10003; Prazo OK — '+restam+' dia(s) para cobrar doc</span>');
+    } else if(dias < 7){
+      badges.push('<span style="background:#fff8e1;color:#f57f17;border:1px solid #ffe082;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">&#9888; Cobrar documentacao — '+restam+' dia(s)</span>');
+    } else {
+      badges.push('<span style="background:#ffebee;color:#c62828;border:1px solid #ef9a9a;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">&#128308; ATRASADO — cobrar doc ha '+dias+' dia(s)</span>');
+    }
+  }
+
+  if(s.status === 'protocolado'){
+    // Prazo 3: verificar andamento
+    var ref = s.ultimoVisto || s.dataProtocolo || s.criado;
+    var diasVisto = diasDesde(ref);
+    var restamVisto = 14 - diasVisto;
+    if(diasVisto < 12){
+      badges.push('<span style="background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">&#10003; Visto OK — verificar em '+restamVisto+' dia(s)</span>');
+    } else if(diasVisto < 14){
+      badges.push('<span style="background:#fff8e1;color:#f57f17;border:1px solid #ffe082;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">&#9888; Verificar andamento em breve</span>');
+    } else {
+      badges.push('<span style="background:#ffebee;color:#c62828;border:1px solid #ef9a9a;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">&#128308; Verificar andamento — '+diasVisto+' dia(s) sem visto</span>');
+    }
+
+    // Prazo 4: GRU
+    if(s.dataProtocolo && !s.gruPaga){
+      var diasGru = diasDesde(s.dataProtocolo);
+      var restamGru = 30 - diasGru;
+      if(diasGru < 20){
+        badges.push('<span style="background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">&#128179; GRU OK — vence em '+restamGru+' dia(s)</span>');
+      } else if(diasGru < 30){
+        badges.push('<span style="background:#fff8e1;color:#f57f17;border:1px solid #ffe082;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">&#9888; GRU vence em '+restamGru+' dia(s)</span>');
+      } else {
+        badges.push('<span style="background:#ffebee;color:#c62828;border:1px solid #ef9a9a;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">&#128308; GRU VENCIDA ha '+(diasGru-30)+' dia(s)</span>');
+      }
+    } else if(s.gruPaga){
+      badges.push('<span style="background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">&#10003; GRU paga '+fmtData(s.gruPaga)+'</span>');
+    }
+  }
+
+  if(s.status === 'em_analise'){
+    var diasAn = diasDesde(s.dataProtocolo || s.inicio);
+    badges.push('<span style="background:#e3f2fd;color:#1565c0;border:1px solid #90caf9;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">&#128269; Em analise ha '+diasAn+' dia(s)</span>');
+  }
+
+  if(s.status === 'deferido'){
+    badges.push('<span style="background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">&#10003; DEFERIDO — processo concluido</span>');
+  }
+  if(s.status === 'indeferido'){
+    badges.push('<span style="background:#ffebee;color:#c62828;border:1px solid #ef9a9a;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">&#10007; INDEFERIDO</span>');
+  }
+
+  if(!badges.length) return '';
+  return '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">'+badges.join('')+'</div>';
 }
 
 function calcularAlertas(){
@@ -4481,29 +4543,40 @@ function recalcularIds(){
 
 // =========== AUTO-PREENCHER IDS DOS DOCUMENTOS (PRIMEIRA VEZ) ===========
 function autoPreencherDocsConfig(){
-  var jaTem = localStorage.getItem('gch_cfg_docs');
-  var temAlgum = false;
-  try{
-    var cfg = JSON.parse(jaTem||'{}');
-    temAlgum = !!(cfg['doc-seg-acervo'] || cfg['doc-residencia'] || cfg['doc-inexistencia']);
-  }catch(e){}
+  // IDs fixos dos templates de documentos
+  var idsDefault = {
+    'doc-seg-acervo':    '1arRcS7BLrf_s9zD6PyB-Im_BWpzFvLnN30mTxkQ8s9Y',
+    'doc-guarda-acervo': '1w4MjQZ7ZZ5fXzApPRwcyEVLRRkp5WSblaURPHZdV9-s',
+    'doc-cinco-anos':    '1i8YETFm_4B0jpPh7rfHsOytIUiOKCn0GtFr_AGv6aFw',
+    'doc-residencia':    '169aNkBxNE2YKsz1XbBuLImSrdCIAAlm8Rruzpq3h2a0',
+    'doc-inexistencia':  '1-YR3-KqJRkBucGw6GmjmAVTdQPTjebx9QCoUhS8R45c',
+    // Pastas raiz FIXAS — CTR e CH
+    'doc-pasta-raiz-ctr':    'https://drive.google.com/drive/folders/1X0flh5p4gnv5rf8qdIbb58yPMi2XwtRs',
+    'doc-pasta-raiz-ctr-id': '1X0flh5p4gnv5rf8qdIbb58yPMi2XwtRs',
+    'doc-pasta-raiz-ch':     'https://drive.google.com/drive/folders/1Xw4iZt7tcxxrv-SkIOlepq0BFBlwzKYo',
+    'doc-pasta-raiz-ch-id':  '1Xw4iZt7tcxxrv-SkIOlepq0BFBlwzKYo'
+  };
 
-  if(!temAlgum){
-    var idsDefault = {
-      'doc-seg-acervo':    '1arRcS7BLrf_s9zD6PyB-Im_BWpzFvLnN30mTxkQ8s9Y',
-      'doc-guarda-acervo': '1w4MjQZ7ZZ5fXzApPRwcyEVLRRkp5WSblaURPHZdV9-s',
-      'doc-cinco-anos':    '1i8YETFm_4B0jpPh7rfHsOytIUiOKCn0GtFr_AGv6aFw',
-      'doc-residencia':    '169aNkBxNE2YKsz1XbBuLImSrdCIAAlm8Rruzpq3h2a0',
-      'doc-inexistencia':  '1-YR3-KqJRkBucGw6GmjmAVTdQPTjebx9QCoUhS8R45c',
-      'doc-pasta-raiz-ctr':    'https://drive.google.com/drive/folders/1X0flh5p4gnv5rf8qdIbb58yPMi2XwtRs',
-      'doc-pasta-raiz-ctr-id': '1X0flh5p4gnv5rf8qdIbb58yPMi2XwtRs',
-      'doc-pasta-raiz-ch':     'https://drive.google.com/drive/folders/1Xw4iZt7tcxxrv-SkIOlepq0BFBlwzKYo',
-      'doc-pasta-raiz-ch-id':  '1Xw4iZt7tcxxrv-SkIOlepq0BFBlwzKYo'
-    };
-    _cfgDocs = idsDefault;
-    localStorage.setItem(CFG_DOCS_KEY, JSON.stringify(idsDefault));
-    console.log('IDs dos documentos pre-configurados automaticamente');
+  // Carregar config existente e mesclar — os IDs de pasta CTR/CH sao sempre sobrescritos
+  var cfgExistente = {};
+  try{ cfgExistente = JSON.parse(localStorage.getItem(CFG_DOCS_KEY)||'{}'); }catch(e){}
+
+  // Mesclar: manter docs de usuario, mas SEMPRE fixar as pastas raiz
+  var cfgFinal = Object.assign({}, cfgExistente, {
+    'doc-pasta-raiz-ctr':    idsDefault['doc-pasta-raiz-ctr'],
+    'doc-pasta-raiz-ctr-id': idsDefault['doc-pasta-raiz-ctr-id'],
+    'doc-pasta-raiz-ch':     idsDefault['doc-pasta-raiz-ch'],
+    'doc-pasta-raiz-ch-id':  idsDefault['doc-pasta-raiz-ch-id']
+  });
+
+  // Pre-preencher templates se ainda nao tiver nenhum
+  var temTemplate = !!(cfgExistente['doc-seg-acervo'] || cfgExistente['doc-residencia']);
+  if(!temTemplate){
+    Object.assign(cfgFinal, idsDefault);
   }
+
+  _cfgDocs = cfgFinal;
+  localStorage.setItem(CFG_DOCS_KEY, JSON.stringify(cfgFinal));
 }
 
 
