@@ -2737,7 +2737,7 @@ function marcarVisto(svId){
   renderAlertas();
   renderServicos();
   enviarGAS(dadosParaMaiusculo(s),'UPDATE','Servicos');
-  setTimeout(function(){ moverParaFinal(s.cliId); renderAgendaHome(); },150);
+  setTimeout(function(){ moverParaFinal(s.id); renderAgendaHome(); },150);
   toast('&#128065; Visto: '+(s.protocolo||s.nomeServico)+' — '+(cl?cl.nome.split(' ')[0]:''),'ok');
 }
 
@@ -4057,38 +4057,44 @@ function reorganizarAgenda(){
 }
 
 function garantirAgenda(){
-  // Garantir que todos os clientes ativos estejam na agenda
-  // e remover inativos
-  var ativos = _cls.filter(function(cl){ return clienteAtivo(cl.id); });
+  // Agenda distribui SERVICOS ativos (nao clientes)
+  var statusFinalizado = ['deferido','indeferido','restituido_doc'];
   var dias = ['ter','qua','qui'];
-  var todos = _agOrdem.ter.concat(_agOrdem.qua).concat(_agOrdem.qui);
-  
-  // Remover inativos
+
+  // Remover servicos finalizados ou que nao existem mais
   dias.forEach(function(d){
-    _agOrdem[d] = _agOrdem[d].filter(function(id){
-      return ativos.some(function(cl){ return cl.id===id; });
+    _agOrdem[d] = _agOrdem[d].filter(function(svId){
+      var s = _servs.find(function(x){ return x.id===svId; });
+      return s && statusFinalizado.indexOf(s.status)<0;
     });
   });
 
-  // Adicionar novos clientes não presentes
-  ativos.forEach(function(cl,i){
-    if(todos.indexOf(cl.id)<0){
-      _agOrdem[dias[i%3]].push(cl.id);
+  // Servicos ativos que ainda nao estao na agenda
+  var todosNaAgenda = _agOrdem.ter.concat(_agOrdem.qua).concat(_agOrdem.qui);
+  var servAtivos = _servs.filter(function(s){
+    return statusFinalizado.indexOf(s.status)<0;
+  });
+
+  servAtivos.forEach(function(s, i){
+    if(todosNaAgenda.indexOf(s.id)<0){
+      _agOrdem[dias[i%3]].push(s.id);
     }
   });
+
   saveAgenda();
 }
 
-function moverParaFinal(cliId){
-  // Quando cliente tem visto marcado, vai pro final do dia dele
+function moverParaFinal(svId){
+  // Quando servico tem visto marcado, vai pro final do dia (score vai cair sozinho)
+  // svId pode ser cliId (chamadas antigas) ou svId (novas chamadas)
+  // Tentar como svId primeiro, depois como cliId
   var dias=['ter','qua','qui'];
   for(var d=0;d<dias.length;d++){
-    var idx=_agOrdem[dias[d]].indexOf(cliId);
+    var idx=_agOrdem[dias[d]].indexOf(svId);
     if(idx>=0){
       _agOrdem[dias[d]].splice(idx,1);
-      _agOrdem[dias[d]].push(cliId);
+      _agOrdem[dias[d]].push(svId);
       saveAgenda();
-      renderAgendaHome();
       return;
     }
   }
@@ -4103,72 +4109,75 @@ function renderAgendaHome(){
     {key:'qui', dia:4, label:'Quinta', id:'ag-qui', hdr:'ag-hdr-qui'}
   ];
 
+  // Aviso de clientes sem servico
+  var semServico = _cls.filter(function(cl){
+    return !_servs.some(function(s){ return s.cliId===cl.id; });
+  });
+  var avisoEl = document.getElementById('ag-aviso-sem-servico');
+  if(!avisoEl){
+    avisoEl = document.createElement('div');
+    avisoEl.id = 'ag-aviso-sem-servico';
+    var grid = document.getElementById('agenda-grid');
+    if(grid && grid.parentNode) grid.parentNode.insertBefore(avisoEl, grid);
+  }
+  if(semServico.length){
+    avisoEl.style.cssText='background:#fff8e1;border:1px solid #ffe082;border-radius:var(--r2);padding:8px 12px;margin-bottom:10px;font-size:12px;color:#f57f17';
+    avisoEl.innerHTML='<b>&#9888; '+semServico.length+' cliente(s) sem servico:</b> '
+      +semServico.map(function(cl){
+        return '<span style="cursor:pointer;text-decoration:underline" onclick="verCliente(\''+cl.id+'\')">' + cl.nome.split(' ')[0] + '</span>';
+      }).join(', ');
+  } else {
+    avisoEl.innerHTML=''; avisoEl.style.cssText='';
+  }
+
+  var statusFinalizado = ['deferido','indeferido','restituido_doc'];
+
   dias.forEach(function(info){
     var hdrEl = document.getElementById(info.hdr);
     var listEl = document.getElementById(info.id);
     if(!hdrEl||!listEl) return;
 
     var isHoje = hoje===info.dia;
-    var cor    = isHoje ? 'var(--blue)' : 'var(--muted)';
-    var bg     = isHoje ? 'var(--blue2)' : '#f1f3f5';
-    var bordaHdr = isHoje ? 'border:2px solid var(--blue)' : 'border:1px solid var(--border)';
+    var cor  = isHoje ? 'var(--blue)' : 'var(--muted)';
+    var bg   = isHoje ? 'var(--blue2)' : '#f1f3f5';
+    var borda= isHoje ? 'border:2px solid var(--blue)' : 'border:1px solid var(--border)';
 
-    // Montar lista de clientes com score de prioridade
     var itens = [];
-    (_agOrdem[info.key]||[]).forEach(function(cliId){
-      var cl = _cls.find(function(c){ return c.id===cliId; });
+    (_agOrdem[info.key]||[]).forEach(function(svId){
+      var s = _servs.find(function(x){ return x.id===svId; });
+      if(!s || statusFinalizado.indexOf(s.status)>=0) return;
+      var cl = _cls.find(function(c){ return c.id===s.cliId; });
       if(!cl) return;
-      var servAbertos = _servs.filter(function(s){
-        return s.cliId===cliId && s.status!=='deferido' && s.status!=='indeferido';
-      });
-      // Calcular maior urgência
-      var maxDias = 0;
-      var gruUrgente = false;
-      servAbertos.forEach(function(s){
-        var d = diasDesde(s.ultimoVisto||s.inicio);
-        if(d>maxDias) maxDias=d;
-        if(s.dataProtocolo && !s.gruPaga){
-          var dg = diasDesde(s.dataProtocolo);
-          if(dg>=20) gruUrgente=true;
-        }
-      });
-      // Score: 0=ok, 1=atenção, 2=urgente
-      var score = maxDias>=14 ? 2 : (maxDias>=7 || gruUrgente) ? 1 : 0;
-      itens.push({cliId:cliId, cl:cl, servAbertos:servAbertos, maxDias:maxDias, gruUrgente:gruUrgente, score:score});
+      var diasVisto = diasDesde(s.ultimoVisto||s.inicio);
+      var gruUrgente = !!(s.dataProtocolo && !s.gruPaga && diasDesde(s.dataProtocolo)>=20);
+      var score = diasVisto>=14 ? 2 : (diasVisto>=7||gruUrgente) ? 1 : 0;
+      itens.push({svId:svId, s:s, cl:cl, diasVisto:diasVisto, gruUrgente:gruUrgente, score:score});
     });
 
-    // Ordenar: urgentes (score 2) > atenção (score 1) > ok (score 0), depois por dias desc
     itens.sort(function(a,b){
-      if(b.score !== a.score) return b.score - a.score;
-      return b.maxDias - a.maxDias;
+      if(b.score!==a.score) return b.score-a.score;
+      return b.diasVisto-a.diasVisto;
     });
 
-    hdrEl.style.cssText = 'font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;text-align:center;padding:7px;border-radius:var(--r2);margin-bottom:8px;background:'+bg+';color:'+cor+';'+bordaHdr;
-    hdrEl.textContent = (isHoje?'★ ':'')+info.label+' ('+itens.length+')';
+    hdrEl.style.cssText='font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;text-align:center;padding:7px;border-radius:var(--r2);margin-bottom:8px;background:'+bg+';color:'+cor+';'+borda;
+    hdrEl.textContent=(isHoje?'* ':'')+info.label+' ('+itens.length+')';
 
     listEl.innerHTML='';
     if(!itens.length){
-      listEl.innerHTML='<div style="font-size:11px;color:var(--muted);text-align:center;padding:12px 0">Nenhum cliente</div>';
+      listEl.innerHTML='<div style="font-size:11px;color:var(--muted);text-align:center;padding:12px 0">Nenhum servico</div>';
       return;
     }
 
-    var limite = 5;
-    var mostrar = itens.slice(0, limite);
-    var resto = itens.slice(limite);
+    var limite=5;
+    itens.slice(0,limite).forEach(function(item){ listEl.appendChild(criarCardAgenda(item,isHoje)); });
 
-    mostrar.forEach(function(item){
-      listEl.appendChild(criarCardAgenda(item, isHoje));
-    });
-
-    if(resto.length){
-      var btnMais = document.createElement('div');
+    if(itens.length>limite){
+      var btnMais=document.createElement('div');
       btnMais.style.cssText='font-size:11px;color:var(--blue);text-align:center;padding:5px 0;font-weight:700;cursor:pointer;border-top:1px solid var(--border);margin-top:4px';
-      btnMais.textContent='+ '+resto.length+' cliente(s)';
+      btnMais.textContent='+ '+(itens.length-limite)+' servico(s)';
       btnMais.addEventListener('click',function(){
         btnMais.remove();
-        resto.forEach(function(item){
-          listEl.appendChild(criarCardAgenda(item, isHoje));
-        });
+        itens.slice(limite).forEach(function(item){ listEl.appendChild(criarCardAgenda(item,isHoje)); });
       });
       listEl.appendChild(btnMais);
     }
@@ -4176,19 +4185,13 @@ function renderAgendaHome(){
 }
 
 function criarCardAgenda(item, isHoje){
-  var cl = item.cl;
-  var maxDias = item.maxDias;
-  var score = item.score;
+  var s=item.s, cl=item.cl, score=item.score, diasVisto=item.diasVisto;
+  var alertaCor=score===2?'var(--red)':score===1?'#b45309':'var(--green)';
+  var alertaBg =score===2?'var(--red2)':score===1?'#fef3c7':'var(--green2)';
+  var alertaTxt=score===2?diasVisto+'d !':score===1?(item.gruUrgente&&diasVisto<7?'GRU!':diasVisto+'d'):'OK';
+  var opacidade=score===0?'0.65':'1';
 
-  var alertaCor = score===2 ? 'var(--red)' : score===1 ? '#b45309' : 'var(--green)';
-  var alertaBg  = score===2 ? 'var(--red2)' : score===1 ? '#fef3c7' : 'var(--green2)';
-  var alertaTxt = score===2 ? maxDias+'d !' : score===1 ? maxDias+'d' : 'OK';
-  // GRU urgente mesmo com maxDias baixo
-  if(item.gruUrgente && score===1 && maxDias<7){ alertaTxt='GRU!'; }
-
-  var opacidade = score===0 ? '0.6' : '1';
-
-  var div = document.createElement('div');
+  var div=document.createElement('div');
   div.style.cssText='background:#fff;border:1px solid var(--border);border-radius:var(--r2);padding:7px 9px;margin-bottom:5px;cursor:pointer;transition:.15s;opacity:'+opacidade+';'
     +(isHoje?'border-left:3px solid '+alertaCor+';':'');
   div.onmouseover=function(){ this.style.borderColor='var(--blue)'; this.style.opacity='1'; };
@@ -4196,20 +4199,16 @@ function criarCardAgenda(item, isHoje){
   div.innerHTML=
     '<div style="display:flex;justify-content:space-between;align-items:center;gap:4px">'
     +'<div style="flex:1;min-width:0">'
-    +'<div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)">'+cl.nome.split(' ')[0]+'</div>'
-    +'<div style="font-size:10px;color:var(--dim);margin-top:1px">'+(cl.clienteId||cl.tipo)+' &middot; '+item.servAbertos.length+' serv</div>'
+    +'<div style="font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'
+    +cl.nome.split(' ')[0]+'</div>'
+    +'<div style="font-size:10px;color:var(--dim);margin-top:1px">'+(s.protocolo||s.nomeServico)+'</div>'
     +'</div>'
-    +(maxDias>0||score===0?'<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:'+alertaBg+';color:'+alertaCor+';font-weight:800;flex-shrink:0">'+alertaTxt+'</span>':'')
+    +'<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:'+alertaBg+';color:'+alertaCor+';font-weight:800;flex-shrink:0">'+alertaTxt+'</span>'
     +'</div>';
 
-  div.addEventListener('click',function(){
-    _agCliAtual = cl.id;
-    verCliente(cl.id);
-  });
+  div.addEventListener('click',function(){ _agCliAtual=cl.id; verCliente(cl.id); });
   return div;
 }
-
-var _agCliAtual = null;
 
 // marcarVisto unificada acima
 
@@ -4276,7 +4275,7 @@ function confirmarVisto(){
   enviarGAS(dadosParaMaiusculo(s),'UPDATE','Servicos');
 
   // Mover para o final da agenda
-  if(s.cliId) setTimeout(function(){ moverParaFinal(s.cliId); renderAgendaHome(); },150);
+  if(s.cliId) setTimeout(function(){ moverParaFinal(s.id); renderAgendaHome(); },150);
 
   fecharModalVisto();
   var msg='&#128065; Visto: '+(s.protocolo||s.nomeServico);
