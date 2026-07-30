@@ -315,6 +315,8 @@ select.inp option{background:#fff}
         <input class="inp" id="f-rg" placeholder="Ex: 1234567-8" oninput="U(this)"></div>
       <div class="field"><label>Orgao Expedidor</label>
         <input class="inp" id="f-orgao" placeholder="Ex: SSP/BA" oninput="U(this)"></div>
+      <div class="field"><label>Data de Emissao do RG</label>
+        <input class="inp" id="f-rg-emissao" placeholder="Ex: 15/06/2010" oninput="mData(this)" maxlength="10"></div>
       <div class="field"><label>Data de Nascimento</label>
         <input class="inp" id="f-nasc" placeholder="Ex: 15/06/1990" oninput="mData(this)" maxlength="10"></div>
       <div class="field"><label>Naturalidade</label>
@@ -697,7 +699,7 @@ function gerarDoc(params) {
     var doc      = DocumentApp.openById(copia.getId());
     var body     = doc.getBody();
 
-    var vars = ['NOME','CPF','RG','ORGAO','NASCIMENTO','NATURALIDADE',
+    var vars = ['NOME','CPF','RG','ORGAO','RG_EMISSAO','NASCIMENTO','NATURALIDADE',
                 'ESTADO_CIVIL','PROFISSAO','ENDERECO','CIDADE','CEP',
                 'TELEFONE','EMAIL','TITULO','NOME_PAI','NOME_MAE',
                 'PROP_NOME','PROP_CPF','PROP_RG','PROP_ORGAO','DATA_HOJE'];
@@ -794,7 +796,7 @@ function montarLinha(params, sheetName) {
   } else {
     return [
       params.seq, params.clienteId, params.id, params.nome, params.tipo,
-      params.cpf, params.rg, params.orgao, params.nascimento, params.naturalidade,
+      params.cpf, params.rg, params.orgao, params.rgemissao||'', params.nascimento, params.naturalidade,
       params.estado_civil, params.profissao, params.pai, params.mae, params.titulo,
       params.telefone, params.email, params.endereco, params.cidade, params.cep,
       params.prop_nome, params.prop_cpf, params.prop_rg, params.prop_orgao,
@@ -1276,7 +1278,7 @@ function g(id){ var el=document.getElementById(id); return el ? el.value.trim() 
 function set(id,v){ var el=document.getElementById(id); if(el) el.value=(v||''); }
 
 function limparForm(){
-  ['f-nome','f-cpf','f-gsenha','f-rg','f-nasc','f-natural',
+  ['f-nome','f-cpf','f-gsenha','f-rg','f-orgao','f-rg-emissao','f-nasc','f-natural',
    'f-civil','f-prof','f-pai','f-mae','f-titulo','f-tel','f-email',
    'f-end','f-cidade','f-cep','f-pnome','f-pcpf','f-prg',   'f-end2','f-cidade2','f-cep2','f-obs'].forEach(function(id){ set(id,''); });
   set('f-tipo','CH');
@@ -1382,7 +1384,7 @@ function salvar(){
   var d = {
     id:id, seq:seq, clienteId:cliId, tipo:tipo,
     nome:nome, cpf:g('f-cpf'), gsenha:g('f-gsenha'),
-    rg:g('f-rg'), orgao:g('f-orgao'), nascimento:g('f-nasc'),
+    rg:g('f-rg'), orgao:g('f-orgao'), rgEmissao:g('f-rg-emissao'), nascimento:g('f-nasc'),
     naturalidade:g('f-natural'), estado_civil:g('f-civil'), profissao:g('f-prof'),
     pai:g('f-pai'), mae:g('f-mae'), titulo:g('f-titulo'),
     telefone:g('f-tel'), email:g('f-email'),
@@ -1421,7 +1423,7 @@ function editarAtual(){
   var cl = _cls.find(function(c){ return c.id===_editId; }); if(!cl) return;
 
   var m = {
-    'f-nome':cl.nome,'f-cpf':cl.cpf,'f-gsenha':cl.gsenha,    'f-rg':cl.rg,'f-orgao':cl.orgao,'f-nasc':cl.nascimento,
+    'f-nome':cl.nome,'f-cpf':cl.cpf,'f-gsenha':cl.gsenha,    'f-rg':cl.rg,'f-orgao':cl.orgao,'f-rg-emissao':cl.rgEmissao||'','f-nasc':cl.nascimento,
     'f-natural':cl.naturalidade,'f-civil':cl.estado_civil,'f-prof':cl.profissao,
     'f-pai':cl.pai,'f-mae':cl.mae,'f-titulo':cl.titulo,
     'f-tel':cl.telefone,'f-email':cl.email,
@@ -1758,7 +1760,7 @@ function verCliente(id){
   h+=exibir('ID',cl.clienteId);
   h+=exibir('Tipo',cl.tipo);
   h+=exibir('CPF',cl.cpf);
-  h+=exibir('RG',cl.rg?(cl.rg+(cl.orgao?' / '+cl.orgao:'')):'');
+  h+=exibir('RG',cl.rg?(cl.rg+(cl.orgao?' / '+cl.orgao:'')+(cl.rgEmissao?' — emitido em '+cl.rgEmissao:'')):'');
   h+=exibir('Nascimento',cl.nascimento);
   h+=exibir('Naturalidade',cl.naturalidade);
   h+=exibir('Estado Civil',cl.estado_civil);
@@ -3003,7 +3005,7 @@ function gerarDocumentos(modo){
       pastaClienteId: pastaIdAtual,
       nomeDoc:(SIGLAS_DOCS[tipo]||NOMES_DOCS[tipo])+' - '+(cl.nome||'').toUpperCase(),
       modo:modo,
-      NOME:cl.nome||'', CPF:cl.cpf||'', RG:cl.rg||'', ORGAO:cl.orgao||'',
+      NOME:cl.nome||'', CPF:cl.cpf||'', RG:cl.rg||'', ORGAO:cl.orgao||'', RG_EMISSAO:cl.rgEmissao||'',
       NASCIMENTO:cl.nascimento||'', NATURALIDADE:cl.naturalidade||'',
       ESTADO_CIVIL:cl.estado_civil||'', PROFISSAO:cl.profissao||'',
       ENDERECO:cl.endereco||'', CIDADE:cl.cidade||'', CEP:cl.cep||'',
@@ -4366,6 +4368,7 @@ function importarDaPlanilha(){
           cpf:         String(r.cpf||r.CPF||'').trim(),
           rg:          String(r.rg||r.RG||'').trim(),
           orgao:       String(r.orgao||r.ORGAO||'').trim(),
+          rgEmissao:   String(r.rgemissao||r.RG_EMISSAO||r.RGEMISSAO||'').trim(),
           nascimento:  formatarDataParaPlanilha(String(r.nascimento||r.NASCIMENTO||'').trim()),
           naturalidade:String(r.naturalidade||r.NATURALIDADE||'').trim(),
           estado_civil:String(r.estado_civil||r.ESTADO_CIVIL||'').trim(),
