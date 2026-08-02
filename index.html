@@ -1540,6 +1540,22 @@ function renderInicio(){
   carregarAnotacao();
   renderAgendaHome();
 
+  // Aviso quando sem dados locais (celular novo / cache limpo)
+  var avisoSync = document.getElementById('aviso-sync-home');
+  if(!avisoSync){
+    avisoSync = document.createElement('div');
+    avisoSync.id = 'aviso-sync-home';
+    var appDiv = document.getElementById('pg-inicio');
+    if(appDiv) appDiv.insertBefore(avisoSync, appDiv.firstChild);
+  }
+  if(_cls.length === 0 && _gasUrl){
+    avisoSync.style.cssText='background:#e3f2fd;border:1px solid #90caf9;border-radius:var(--r2);padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:10px';
+    avisoSync.innerHTML='<span style="font-size:13px;color:#1565c0">&#128260; Buscando dados da planilha...</span>'
+      +'<button class="btn b-blue b-xs" onclick="importarDaPlanilha()">&#8635; Sincronizar agora</button>';
+  } else {
+    avisoSync.style.cssText='display:none';
+  }
+
   // Aviso sexta
   var dh = new Date().getDay();
   var avisoSexta = document.getElementById('aviso-sexta-home');
@@ -5218,9 +5234,24 @@ recalcularIds();
 atualizarStats();
 carregarAnotacao();
 renderCalendario();
-// Importar da planilha após 2 segundos (deixa o sistema carregar primeiro)
-setTimeout(importarDaPlanilha, 2000);
-setTimeout(carregarConfigDaPlanilha, 1500);
+
+// Estrategia de sincronizacao inteligente:
+// Se nao tem dados locais (celular novo, cache limpo), importar IMEDIATAMENTE
+// Se ja tem dados, importar em background apos 2s
+var semDadosLocais = (_cls.length === 0 && _servs.length === 0);
+if(semDadosLocais && _gasUrl){
+  // Mostrar aviso de carregamento na tela inicial
+  setTimeout(function(){
+    var stats = document.getElementById('stat-total');
+    if(stats) stats.textContent = '...';
+    toast('Buscando dados da planilha...', 'warn');
+  }, 300);
+  setTimeout(importarDaPlanilha, 800);
+  setTimeout(carregarConfigDaPlanilha, 600);
+} else {
+  setTimeout(importarDaPlanilha, 2000);
+  setTimeout(carregarConfigDaPlanilha, 1500);
+}
 setTimeout(backupDiario,3000);
 setTimeout(enviarFilaSync,2000);
 setTimeout(verificarSexta,1500);
