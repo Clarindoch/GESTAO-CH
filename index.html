@@ -468,12 +468,47 @@ select.inp option{background:#fff}
 // Acesso: Anyone
 // ========================================
 
-function doGet(e) { return doPost(e); }
+function doGet(e) {
+  // Suporta tanto JSONP (callback param) quanto fetch direto com CORS
+  var params = e.parameter || {};
+  var callback = params.callback || null;
+
+  // Processar a requisicao igual ao doPost
+  var resultado = processarRequisicao(params);
+  var texto = JSON.stringify(resultado);
+
+  if (callback) {
+    // JSONP para compatibilidade com browsers que bloqueiam CORS
+    return ContentService
+      .createTextOutput(callback + '(' + texto + ');')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+
+  // Retorno JSON puro — usado pelo fetch() nativo
+  return ContentService
+    .createTextOutput(texto)
+    .setMimeType(ContentService.MimeType.JSON);
+}
 
 function doPost(e) {
   var params = e.parameter || {};
   _CALLBACK_GLOBAL = params.callback || null;
-  var acao   = params.acao || 'INSERT';
+  var resultado = processarRequisicao(params);
+  var texto = JSON.stringify(resultado);
+
+  if (_CALLBACK_GLOBAL) {
+    return ContentService
+      .createTextOutput(_CALLBACK_GLOBAL + '(' + texto + ');')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  return ContentService
+    .createTextOutput(texto)
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function processarRequisicao(params) {
+  _CALLBACK_GLOBAL = params.callback || null;
+  var acao = params.acao || 'INSERT';
 
   // Redirecionar para gerarDoc se necessario
   if (acao === 'PING') { return jsonOk({pong: true, ts: new Date().toISOString()}); }
@@ -4681,33 +4716,52 @@ function gasFetchPost(qs){
 
 var _gasCbCount = 0;
 function gasFetch(qs){
-  // Usa JSONP via tag <script> para contornar restricoes de CORS do Apps Script
-  return new Promise(function(resolve, reject){
-    var cbName = '_gasCb' + (_gasCbCount++);
-    var timeoutId = setTimeout(function(){
-      cleanup();
-      reject(new Error('Timeout - GAS nao respondeu (conexao lenta ou GAS inativo)'));
-    }, 25000);
+  // Tenta fetch() nativo primeiro (mais confiavel no mobile)
+  // GAS responde com headers CORS via doGet redirect
+  var url = _gasUrl + '?' + qs;
+  var timeoutMs = 25000;
 
-    function cleanup(){
-      clearTimeout(timeoutId);
-      delete window[cbName];
-      if(script && script.parentNode) script.parentNode.removeChild(script);
-    }
-
-    window[cbName] = function(data){
-      cleanup();
-      resolve(data);
-    };
-
-    var script = document.createElement('script');
-    script.src = _gasUrl + '?' + qs + '&callback=' + cbName;
-    script.onerror = function(){
-      cleanup();
-      reject(new Error('Falha ao carregar script GAS'));
-    };
-    document.body.appendChild(script);
+  var timeoutPromise = new Promise(function(_, reject){
+    setTimeout(function(){ reject(new Error('Timeout - GAS nao respondeu')); }, timeoutMs);
   });
+
+  var fetchPromise = fetch(url, {
+    method: 'GET',
+    mode: 'cors',
+    redirect: 'follow'
+  }).then(function(resp){
+    return resp.json();
+  }).then(function(data){
+    return data;
+  });
+
+  return Promise.race([fetchPromise, timeoutPromise])
+    .catch(function(errFetch){
+      // Se fetch falhar (CORS bloqueado), tentar JSONP como fallback
+      return new Promise(function(resolve, reject){
+        var cbName = '_gasCb' + (_gasCbCount++);
+        var timeoutId = setTimeout(function(){
+          cleanup();
+          reject(new Error('Timeout - GAS nao respondeu (rede lenta)'));
+        }, timeoutMs);
+
+        function cleanup(){
+          clearTimeout(timeoutId);
+          delete window[cbName];
+          if(script && script.parentNode) script.parentNode.removeChild(script);
+        }
+
+        window[cbName] = function(data){ cleanup(); resolve(data); };
+
+        var script = document.createElement('script');
+        script.src = _gasUrl + '?' + qs + '&callback=' + cbName;
+        script.onerror = function(){
+          cleanup();
+          reject(new Error('Falha ao conectar com GAS. Verifique se o GAS esta publicado como App da Web com acesso "Qualquer pessoa".'));
+        };
+        document.body.appendChild(script);
+      });
+    });
 }
 
 
