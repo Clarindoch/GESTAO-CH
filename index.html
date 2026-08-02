@@ -468,25 +468,18 @@ select.inp option{background:#fff}
 // Acesso: Anyone
 // ========================================
 
-function doGet(e) {
-  // Suporta tanto JSONP (callback param) quanto fetch direto com CORS
-  var params = e.parameter || {};
-  var callback = params.callback || null;
+var _CALLBACK_GLOBAL = null;
 
-  // Processar a requisicao igual ao doPost
+function doGet(e) {
+  var params = e.parameter || {};
+  _CALLBACK_GLOBAL = params.callback || null;
   var resultado = processarRequisicao(params);
   var texto = JSON.stringify(resultado);
-
-  if (callback) {
-    // JSONP para compatibilidade com browsers que bloqueiam CORS
-    return ContentService
-      .createTextOutput(callback + '(' + texto + ');')
+  if (_CALLBACK_GLOBAL) {
+    return ContentService.createTextOutput(_CALLBACK_GLOBAL + '(' + texto + ');')
       .setMimeType(ContentService.MimeType.JAVASCRIPT);
   }
-
-  // Retorno JSON puro — usado pelo fetch() nativo
-  return ContentService
-    .createTextOutput(texto)
+  return ContentService.createTextOutput(texto)
     .setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -495,195 +488,180 @@ function doPost(e) {
   _CALLBACK_GLOBAL = params.callback || null;
   var resultado = processarRequisicao(params);
   var texto = JSON.stringify(resultado);
-
   if (_CALLBACK_GLOBAL) {
-    return ContentService
-      .createTextOutput(_CALLBACK_GLOBAL + '(' + texto + ');')
+    return ContentService.createTextOutput(_CALLBACK_GLOBAL + '(' + texto + ');')
       .setMimeType(ContentService.MimeType.JAVASCRIPT);
   }
-  return ContentService
-    .createTextOutput(texto)
+  return ContentService.createTextOutput(texto)
     .setMimeType(ContentService.MimeType.JSON);
 }
 
 function processarRequisicao(params) {
-  _CALLBACK_GLOBAL = params.callback || null;
   var acao = params.acao || 'INSERT';
 
-  // Redirecionar para gerarDoc se necessario
-  if (acao === 'PING') { return jsonOk({pong: true, ts: new Date().toISOString()}); }
-  if (acao === 'GERAR_DOC') { return gerarDoc(params); }
+  // Acoes sem planilha
+  if (acao === 'PING') {
+    return {ok: true, data: {pong: true, ts: new Date().toISOString()}};
+  }
+  if (acao === 'GERAR_DOC')      { return gerarDoc(params); }
   if (acao === 'UPLOAD_ARQUIVO') { return uploadArquivo(params); }
-  
-// CRIAR PASTA DO CLIENTE
-if (acao === 'CRIAR_PASTA') {
-  try {
-    var pastaRaizId2 = params.pastaRaiz || '';
-    var nomePasta2   = params.nomePasta  || 'CLIENTE';
-    var pasta2;
-    if (pastaRaizId2) {
-      var raiz2   = DriveApp.getFolderById(pastaRaizId2);
-      var pastas2 = raiz2.getFoldersByName(nomePasta2);
-      if (pastas2.hasNext()) {
-        pasta2 = pastas2.next();
+
+  // Planilha principal
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // CRIAR PASTA
+  if (acao === 'CRIAR_PASTA') {
+    try {
+      var pastaRaizId2 = params.pastaRaiz || '';
+      var nomePasta2   = params.nomePasta  || 'CLIENTE';
+      var pasta2;
+      if (pastaRaizId2) {
+        var raiz2   = DriveApp.getFolderById(pastaRaizId2);
+        var pastas2 = raiz2.getFoldersByName(nomePasta2);
+        pasta2 = pastas2.hasNext() ? pastas2.next() : raiz2.createFolder(nomePasta2);
       } else {
-        pasta2 = raiz2.createFolder(nomePasta2);
+        var todas2 = DriveApp.getFoldersByName(nomePasta2);
+        pasta2 = todas2.hasNext() ? todas2.next() : DriveApp.createFolder(nomePasta2);
       }
-    } else {
-      var todas2 = DriveApp.getFoldersByName(nomePasta2);
-      pasta2 = todas2.hasNext() ? todas2.next() : DriveApp.createFolder(nomePasta2);
-    }
-    return jsonOk({ pastaId: pasta2.getId(), nomePasta: nomePasta2 });
-  } catch(err2) {
-    return jsonErr(err2.toString());
+      return {ok: true, data: {pastaId: pasta2.getId(), nomePasta: nomePasta2}};
+    } catch(err2) { return {ok: false, error: err2.toString()}; }
   }
-}
 
-// SALVAR CONFIGURACAO (URL, IDs documentos, pasta raiz)
-if (acao === 'SALVAR_CONFIG') {
-  var sheetCfg = ss.getSheetByName('Config') || ss.insertSheet('Config');
-  if (sheetCfg.getLastRow() === 0) {
-    sheetCfg.appendRow(['CHAVE', 'VALOR']);
-    sheetCfg.getRange(1,1,1,2).setFontWeight('bold').setBackground('#1a5fa8').setFontColor('#ffffff');
-  }
-  var chavesConfig = ['doc-seg-acervo','doc-guarda-acervo','doc-cinco-anos','doc-residencia','doc-inexistencia',
-    'doc-pasta-raiz','doc-pasta-raiz-id',
-    'doc-pasta-raiz-ctr','doc-pasta-raiz-ctr-id',
-    'doc-pasta-raiz-ch','doc-pasta-raiz-ch-id'];
-  var dadosCfg = sheetCfg.getDataRange().getValues();
-  chavesConfig.forEach(function(chave) {
-    var valor = params[chave] || '';
-    var achou = false;
-    for (var i = 1; i &lt; dadosCfg.length; i++) {
-      if (dadosCfg[i][0] === chave) {
-        sheetCfg.getRange(i+1, 2).setValue(valor);
-        achou = true;
-        break;
+  // SALVAR CONFIG
+  if (acao === 'SALVAR_CONFIG') {
+    var sheetCfg = ss.getSheetByName('Config') || ss.insertSheet('Config');
+    if (sheetCfg.getLastRow() === 0) {
+      sheetCfg.appendRow(['CHAVE','VALOR']);
+      sheetCfg.getRange(1,1,1,2).setFontWeight('bold').setBackground('#1a5fa8').setFontColor('#ffffff');
+    }
+    var chavesConfig = ['doc-seg-acervo','doc-guarda-acervo','doc-cinco-anos','doc-residencia','doc-inexistencia',
+      'doc-pasta-raiz','doc-pasta-raiz-id','doc-pasta-raiz-ctr','doc-pasta-raiz-ctr-id',
+      'doc-pasta-raiz-ch','doc-pasta-raiz-ch-id'];
+    var dadosCfg = sheetCfg.getDataRange().getValues();
+    chavesConfig.forEach(function(chave) {
+      var valor = params[chave] || '';
+      var achou = false;
+      for (var i = 1; i &lt; dadosCfg.length; i++) {
+        if (dadosCfg[i][0] === chave) { sheetCfg.getRange(i+1,2).setValue(valor); achou=true; break; }
       }
-    }
-    if (!achou &amp;&amp; valor) {
-      sheetCfg.appendRow([chave, valor]);
-    }
-  });
-  return jsonOk({salvo: true});
-}
-
-// LER CONFIGURACAO
-if (acao === 'LER_CONFIG') {
-  var sheetCfg2 = ss.getSheetByName('Config');
-  if (!sheetCfg2 || sheetCfg2.getLastRow() &lt; 2) return jsonOk({config: {}});
-  var dadosCfg2 = sheetCfg2.getDataRange().getValues();
-  var config = {};
-  for (var i = 1; i &lt; dadosCfg2.length; i++) {
-    if (dadosCfg2[i][0]) config[dadosCfg2[i][0]] = dadosCfg2[i][1];
+      if (!achou &amp;&amp; valor) sheetCfg.appendRow([chave, valor]);
+    });
+    return {ok: true, data: {salvo: true}};
   }
-  return jsonOk({config: config});
-}
 
+  // LER CONFIG
+  if (acao === 'LER_CONFIG') {
+    var sheetCfg2 = ss.getSheetByName('Config');
+    if (!sheetCfg2 || sheetCfg2.getLastRow() &lt; 2) return {ok: true, data: {config: {}}};
+    var dadosCfg2 = sheetCfg2.getDataRange().getValues();
+    var config = {};
+    for (var i = 1; i &lt; dadosCfg2.length; i++) {
+      if (dadosCfg2[i][0]) config[dadosCfg2[i][0]] = dadosCfg2[i][1];
+    }
+    return {ok: true, data: {config: config}};
+  }
 
-
-  var ss        = SpreadsheetApp.getActiveSpreadsheet();
+  // Operacoes na planilha (Clientes / Servicos)
   var sheetName = params.sheet || 'Clientes';
-  var sheet     = ss.getSheetByName(sheetName) || ss.insertSheet(sheetName);
+  var sheet = ss.getSheetByName(sheetName) || ss.insertSheet(sheetName);
 
-  // Criar cabecalho automaticamente
+  // Criar cabecalho automaticamente se vazio
   if (sheet.getLastRow() === 0) {
     if (sheetName === 'Servicos') {
       sheet.appendRow(['PROTOCOLO','ID','CLI_ID','CLI_NOME','CLI_CODIGO','TIPO_SERVICO','TIPO_CLIENTE',
         'NOME_SERVICO','DETALHE','INICIO','PRAZO','STATUS','OBS','DATA_PROTOCOLO',
-        'ULTIMO_VISTO','GRU_COMUNICADA','CRIADO','ATUALIZADO']);
-      sheet.getRange(1,1,1,17).setFontWeight('bold')
-        .setBackground('#1e7a48').setFontColor('#ffffff');
+        'ULTIMO_VISTO','GRU_COMUNICADA','GRU_PAGA','CRIADO','ATUALIZADO']);
+      sheet.getRange(1,1,1,19).setFontWeight('bold').setBackground('#1e7a48').setFontColor('#ffffff');
     } else {
-      sheet.appendRow(['SEQ','CLIENTE_ID','ID','NOME','TIPO','CPF','RG','ORGAO',
+      sheet.appendRow(['SEQ','CLIENTE_ID','ID','NOME','TIPO','CPF','RG','ORGAO','RG_EMISSAO',
         'NASCIMENTO','NATURALIDADE','ESTADO_CIVIL','PROFISSAO','PAI','MAE','TITULO',
         'TELEFONE','EMAIL','ENDERECO','CIDADE','CEP',
         'PROP_NOME','PROP_CPF','PROP_RG','PROP_ORGAO',
-        'ENDERECO2','CIDADE2','CEP2',
-        'GOV_SENHA','OBS','CRIADO','ATUALIZADO']);
-      sheet.getRange(1,1,1,31).setFontWeight('bold')
-        .setBackground('#1a5fa8').setFontColor('#ffffff');
+        'ENDERECO2','CIDADE2','CEP2','GOV_SENHA','OBS','CRIADO','ATUALIZADO',
+        'PASTA_ID','PASTA_URL']);
+      sheet.getRange(1,1,1,34).setFontWeight('bold').setBackground('#1a5fa8').setFontColor('#ffffff');
     }
   }
 
   var id = params.id || '';
 
-  if (acao === 'UPSERT') {
-    // Verifica se registro existe pelo ID — se sim atualiza, senão insere
-    var dadosExist = sheet.getDataRange().getValues();
-    var idCol = sheetName === 'Servicos' ? 1 : 2; // coluna do ID (0-indexed)
-    var encontrou = false;
-    for (var i = 1; i &lt; dadosExist.length; i++) {
-      if (String(dadosExist[i][idCol]) === String(params.id)) {
-        // UPDATE
-        var linhaUp = montarLinha(params, sheetName);
-        sheet.getRange(i+1, 1, 1, linhaUp.length).setValues([linhaUp]);
-        encontrou = true;
-        break;
-      }
-    }
-    if (!encontrou) {
-      // INSERT
-      var linhaIns = montarLinha(params, sheetName);
-      sheet.appendRow(linhaIns);
-    }
-    return jsonOk({upserted: params.id, novo: !encontrou});
-  }
-
-  if (acao === 'DELETE') {
-    var dadosDel = sheet.getDataRange().getValues();
-    for (var i = 1; i &lt; dadosDel.length; i++) {
-      // Checar coluna ID (pos 2 para clientes, pos 1 para servicos)
-      if (String(dadosDel[i][2]) === id || String(dadosDel[i][1]) === id || String(dadosDel[i][0]) === id) {
-        sheet.deleteRow(i + 1); break;
-      }
-    }
-    return jsonOk({deleted: id});
-  }
-
+  // GET_ALL — deduplicar por ID automaticamente
   if (acao === 'GET_ALL') {
     var dados = sheet.getDataRange().getValues();
-    var cab   = dados[0];
-    var res   = [];
+    var cab = dados[0];
+    var res = [];
+    var idsVistos = {};
     for (var i = 1; i &lt; dados.length; i++) {
       var obj = {};
-      cab.forEach(function(c,j){ obj[c.toLowerCase()] = dados[i][j]; });
+      cab.forEach(function(c,j){ obj[String(c).toLowerCase().replace(/ /g,'_')] = dados[i][j]; });
+      var idObj = String(obj['id'] || '').trim();
+      if(!idObj) continue; // ignorar linhas sem ID
+      if(idsVistos[idObj]) continue; // pular duplicado
+      idsVistos[idObj] = true;
       res.push(obj);
     }
-    return jsonOk({clientes: res});
+    return {ok: true, data: {clientes: res}};
   }
 
-  // INSERT ou UPDATE
-  var linha = montarLinha(params, sheetName);
-
+  // UPDATE_PASTA (so atualiza colunas de pasta)
   if (acao === 'UPDATE_PASTA') {
-    // Atualiza apenas PASTA_ID e PASTA_URL sem sobrescrever o resto da linha
     var dados = sheet.getDataRange().getValues();
     var cab = dados[0].map(function(c){ return String(c).toLowerCase().replace(/ /g,'_'); });
     var colPastaId  = cab.indexOf('pasta_id');
     var colPastaUrl = cab.indexOf('pasta_url');
-    for (var i = 1; i < dados.length; i++) {
+    for (var i = 1; i &lt; dados.length; i++) {
       if (String(dados[i][2]) === id) {
-        if (colPastaId  >= 0) sheet.getRange(i+1, colPastaId+1).setValue(params.pasta_id||'');
-        if (colPastaUrl >= 0) sheet.getRange(i+1, colPastaUrl+1).setValue(params.pasta_url||'');
-        return jsonOk({updated_pasta: id});
+        if (colPastaId  &gt;= 0) sheet.getRange(i+1, colPastaId+1).setValue(params.pasta_id||'');
+        if (colPastaUrl &gt;= 0) sheet.getRange(i+1, colPastaUrl+1).setValue(params.pasta_url||'');
+        return {ok: true, data: {updated_pasta: id}};
       }
     }
-    return jsonOk({nao_encontrado: id});
+    return {ok: true, data: {nao_encontrado: id}};
   }
 
+  // UPSERT
+  if (acao === 'UPSERT') {
+    var dadosExist = sheet.getDataRange().getValues();
+    var idCol = sheetName === 'Servicos' ? 1 : 2;
+    var encontrou = false;
+    for (var i = 1; i &lt; dadosExist.length; i++) {
+      if (String(dadosExist[i][idCol]) === String(params.id)) {
+        sheet.getRange(i+1, 1, 1, montarLinha(params, sheetName).length).setValues([montarLinha(params, sheetName)]);
+        encontrou = true; break;
+      }
+    }
+    if (!encontrou) sheet.appendRow(montarLinha(params, sheetName));
+    return {ok: true, data: {upserted: params.id, novo: !encontrou}};
+  }
+
+  // DELETE
+  if (acao === 'DELETE') {
+    var dadosDel = sheet.getDataRange().getValues();
+    for (var i = 1; i &lt; dadosDel.length; i++) {
+      if (String(dadosDel[i][2]) === id || String(dadosDel[i][1]) === id || String(dadosDel[i][0]) === id) {
+        sheet.deleteRow(i+1); break;
+      }
+    }
+    return {ok: true, data: {deleted: id}};
+  }
+
+  // UPDATE_PASTA (acesso via acao explicita)
+  var linha = montarLinha(params, sheetName);
+
+  // UPDATE
   if (acao === 'UPDATE') {
     var dados = sheet.getDataRange().getValues();
     for (var i = 1; i &lt; dados.length; i++) {
       if (String(dados[i][2]) === id || String(dados[i][1]) === id) {
         sheet.getRange(i+1, 1, 1, linha.length).setValues([linha]);
-        return jsonOk({updated: id});
+        return {ok: true, data: {updated: id}};
       }
     }
   }
 
+  // INSERT (fallback)
   sheet.appendRow(linha);
-  return jsonOk({inserted: id});
+  return {ok: true, data: {inserted: id}};
 }
 
 // ========== GERAR DOCUMENTO (Mala Direta) ==========
