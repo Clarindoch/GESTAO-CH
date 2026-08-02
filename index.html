@@ -561,6 +561,37 @@ function processarRequisicao(params) {
     return {ok: true, data: {config: config}};
   }
 
+  // SALVAR AGENDA (ordem dos servicos por dia - sincronizar entre dispositivos)
+  if (acao === 'SALVAR_AGENDA') {
+    var sheetAg = ss.getSheetByName('Config') || ss.insertSheet('Config');
+    if (sheetAg.getLastRow() === 0) sheetAg.appendRow(['CHAVE','VALOR']);
+    var agendaJson = params.agenda_json || '{}';
+    var dadosAg = sheetAg.getDataRange().getValues();
+    var achouAg = false;
+    for (var i = 1; i &lt; dadosAg.length; i++) {
+      if (dadosAg[i][0] === 'agenda_ordem') {
+        sheetAg.getRange(i+1, 2).setValue(agendaJson);
+        achouAg = true; break;
+      }
+    }
+    if (!achouAg) sheetAg.appendRow(['agenda_ordem', agendaJson]);
+    return {ok: true, data: {salvo: true}};
+  }
+
+  // LER AGENDA
+  if (acao === 'LER_AGENDA') {
+    var sheetAgL = ss.getSheetByName('Config');
+    if (!sheetAgL) return {ok: true, data: {agenda: null}};
+    var dadosAgL = sheetAgL.getDataRange().getValues();
+    for (var i = 1; i &lt; dadosAgL.length; i++) {
+      if (dadosAgL[i][0] === 'agenda_ordem') {
+        return {ok: true, data: {agenda: String(dadosAgL[i][1])}};
+      }
+    }
+    return {ok: true, data: {agenda: null}};
+  }
+
+
   // Operacoes na planilha (Clientes / Servicos)
   var sheetName = params.sheet || 'Clientes';
   var sheet = ss.getSheetByName(sheetName) || ss.insertSheet(sheetName);
@@ -1553,6 +1584,56 @@ function calcularEscala(){
 function renderInicio(){
   carregarAnotacao();
   renderAgendaHome();
+
+  // Delegacao de clique para cards de aniversario
+  var pgIn = document.getElementById('pg-inicio');
+  if(pgIn && !pgIn._anivBound){
+    pgIn._anivBound = true;
+    pgIn.addEventListener('click', function(e){
+      var el = e.target.closest('.av-cli');
+      if(el) verCliente(el.getAttribute('data-cli-id'));
+    });
+  }
+
+  // Verificar aniversarios proximos (hoje + 7 dias)
+  var avisoAniv = document.getElementById('aviso-aniv-home');
+  if(!avisoAniv){
+    avisoAniv = document.createElement('div');
+    avisoAniv.id = 'aviso-aniv-home';
+    var pgInicio = document.getElementById('pg-inicio');
+    if(pgInicio) pgInicio.insertBefore(avisoAniv, pgInicio.firstChild);
+  }
+  var hoje7 = [];
+  var hojeData = new Date();
+  hojeData.setHours(0,0,0,0);
+  _cls.forEach(function(cl){
+    if(!cl.nascimento) return;
+    var nasc = cl.nascimento.trim();
+    var dia, mes;
+    if(nasc.indexOf('/')>=0){ var p=nasc.split('/'); dia=parseInt(p[0]);mes=parseInt(p[1]); }
+    else if(nasc.indexOf('-')>=0){ var p=nasc.split('-'); mes=parseInt(p[1]);dia=parseInt(p[2]); }
+    else return;
+    for(var d=0; d<=7; d++){
+      var chk = new Date(hojeData); chk.setDate(hojeData.getDate()+d);
+      if(chk.getDate()===dia && (chk.getMonth()+1)===mes){
+        hoje7.push({nome:cl.nome.split(' ')[0], d:d, cliId:cl.id});
+      }
+    }
+  });
+  if(hoje7.length){
+    var anivHtml = '<div style="background:#fff8e1;border:1px solid #ffe082;border-radius:var(--r2);padding:8px 14px;margin-bottom:10px">'
+      +'<b>&#127874; Aniversarios:</b> '
+      +hoje7.map(function(a){
+        return '<span class="av-cli" data-cli-id="'+a.cliId+'" style="cursor:pointer;text-decoration:underline">'+a.nome+'</span>'
+          +(a.d===0?' — <b style="color:var(--green)">HOJE!</b>'
+            :a.d===1?' — amanha'
+            :' — em '+a.d+' dias');
+      }).join(' &nbsp;|&nbsp; ')
+      +'</div>';
+    avisoAniv.innerHTML = anivHtml;
+  } else {
+    avisoAniv.innerHTML = '';
+  }
 
   // Aviso quando sem dados locais (celular novo / cache limpo)
   var avisoSync = document.getElementById('aviso-sync-home');
@@ -4057,9 +4138,39 @@ function loadAgenda(){
     if(!_agOrdem.qua) _agOrdem.qua=[];
     if(!_agOrdem.qui) _agOrdem.qui=[];
   }catch(e){ _agOrdem={ter:[],qua:[],qui:[]}; }
+
+  // Buscar da planilha para sincronizar (sobrepõe local se houver versão mais recente)
+  if(_gasUrl){
+    gasFetch('acao=LER_AGENDA')
+      .then(function(res){
+        if(res.ok && res.data && res.data.agenda){
+          try{
+            var ag = JSON.parse(res.data.agenda);
+            if(ag && (ag.ter||ag.qua||ag.qui)){
+              _agOrdem = {
+                ter: ag.ter||[],
+                qua: ag.qua||[],
+                qui: ag.qui||[]
+              };
+              localStorage.setItem(KAG, JSON.stringify(_agOrdem));
+              renderAgendaHome(); // re-renderizar com a agenda sincronizada
+            }
+          }catch(e){}
+        }
+      })
+      .catch(function(){});
+  }
 }
 
-function saveAgenda(){ localStorage.setItem(KAG, JSON.stringify(_agOrdem)); }
+function saveAgenda(){
+  localStorage.setItem(KAG, JSON.stringify(_agOrdem));
+  // Sincronizar com planilha para funcionar igual em todos os dispositivos
+  if(_gasUrl){
+    var agendaStr = JSON.stringify(_agOrdem);
+    gasFetch('acao=SALVAR_AGENDA&agenda_json='+encodeURIComponent(agendaStr))
+      .catch(function(){}); // silencioso — nao bloquear o fluxo
+  }
+}
 
 function reorganizarAgenda(){
   // Distribui clientes ativos igualmente nos 3 dias
@@ -5032,16 +5143,35 @@ function montarEventosCalendario(){
     mapa[d].push(evento);
   }
 
-  // 1. Aniversarios — repetem todo ano, usar o ano/mes visivel
+  // 1. Aniversarios — repetem todo ano
   _cls.forEach(function(cl){
     if(!cl.nascimento) return;
-    var nasc = cl.nascimento.length>10 ? cl.nascimento.slice(0,10) : cl.nascimento;
-    var partes = nasc.split('-');
-    if(partes.length!==3) return;
-    var mes = parseInt(partes[1],10)-1;
-    var dia = partes[2];
-    var dataEsteAno = _calAnoAtual+'-'+partes[1]+'-'+dia;
-    add(dataEsteAno, { tipo:'aniversario', icone:'&#127874;', texto: cl.nome.split(' ')[0]+' — Aniversario', cliId: cl.id });
+    var nasc = cl.nascimento.trim();
+    var dia, mes, ano;
+
+    if(nasc.indexOf('/') >= 0){
+      // Formato DD/MM/AAAA
+      var p = nasc.split('/');
+      if(p.length !== 3) return;
+      dia = p[0].padStart(2,'0');
+      mes = p[1].padStart(2,'0');
+      ano = p[2];
+    } else if(nasc.indexOf('-') >= 0){
+      // Formato AAAA-MM-DD
+      var p = nasc.split('-');
+      if(p.length !== 3) return;
+      ano = p[0]; mes = p[1]; dia = p[2].slice(0,2);
+    } else { return; }
+
+    if(!dia || !mes || !ano || ano.length < 4) return;
+
+    var dataEsteAno = _calAnoAtual+'-'+mes+'-'+dia;
+    var idadeAnos = _calAnoAtual - parseInt(ano, 10);
+    add(dataEsteAno, {
+      tipo:'aniversario', icone:'&#127874;',
+      texto: cl.nome.split(' ')[0]+' — Aniversario ('+idadeAnos+' anos)',
+      cliId: cl.id
+    });
   });
 
   // 2. Prazos de servicos (baseado nos 4 prazos do sistema de alertas, convertidos em data)
