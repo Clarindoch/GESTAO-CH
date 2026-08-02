@@ -476,6 +476,7 @@ function doPost(e) {
   var acao   = params.acao || 'INSERT';
 
   // Redirecionar para gerarDoc se necessario
+  if (acao === 'PING') { return jsonOk({pong: true, ts: new Date().toISOString()}); }
   if (acao === 'GERAR_DOC') { return gerarDoc(params); }
   if (acao === 'UPLOAD_ARQUIVO') { return uploadArquivo(params); }
   
@@ -4451,7 +4452,15 @@ function importarDaPlanilha(){
       }
     })
     .catch(function(e){
-      toast('Erro ao conectar com planilha','err');
+      var msg = e && e.message ? e.message : 'falha desconhecida';
+      if(msg.indexOf('Timeout')>=0){
+        toast('GAS demorou pra responder — tentando novamente em 10s...','warn');
+        setTimeout(function(){
+          importarDaPlanilha();
+        }, 10000);
+      } else {
+        toast('Erro ao conectar: '+msg.slice(0,60),'err');
+      }
       console.log('Erro importar:', e);
     });
 
@@ -4677,8 +4686,8 @@ function gasFetch(qs){
     var cbName = '_gasCb' + (_gasCbCount++);
     var timeoutId = setTimeout(function(){
       cleanup();
-      reject(new Error('Timeout - GAS nao respondeu em 35s'));
-    }, 35000);
+      reject(new Error('Timeout - GAS nao respondeu (conexao lenta ou GAS inativo)'));
+    }, 25000);
 
     function cleanup(){
       clearTimeout(timeoutId);
@@ -5217,6 +5226,18 @@ function salvarLembrete(){
   renderCalendario();
 }
 
+function acordarGAS(callback){
+  // Faz uma chamada simples para "acordar" o GAS se estiver inativo
+  // Apps Script tem cold start de 10-20s quando nao foi usado recentemente
+  if(!_gasUrl){ if(callback) callback(); return; }
+  gasFetch('acao=PING')
+    .then(function(){ if(callback) callback(); })
+    .catch(function(){
+      // Mesmo que o ping falhe, tenta importar de qualquer forma
+      if(callback) callback();
+    });
+}
+
 // =========== INIT ===========
 
 
@@ -5240,17 +5261,18 @@ renderCalendario();
 // Se ja tem dados, importar em background apos 2s
 var semDadosLocais = (_cls.length === 0 && _servs.length === 0);
 if(semDadosLocais && _gasUrl){
-  // Mostrar aviso de carregamento na tela inicial
+  toast('Conectando com a planilha...', 'warn');
   setTimeout(function(){
-    var stats = document.getElementById('stat-total');
-    if(stats) stats.textContent = '...';
-    toast('Buscando dados da planilha...', 'warn');
-  }, 300);
-  setTimeout(importarDaPlanilha, 800);
-  setTimeout(carregarConfigDaPlanilha, 600);
+    // Primeiro acorda o GAS (cold start), depois importa
+    acordarGAS(function(){
+      importarDaPlanilha();
+      carregarConfigDaPlanilha();
+    });
+  }, 500);
 } else {
-  setTimeout(importarDaPlanilha, 2000);
-  setTimeout(carregarConfigDaPlanilha, 1500);
+  // Ja tem dados locais — sincronizar em background
+  setTimeout(importarDaPlanilha, 3000);
+  setTimeout(carregarConfigDaPlanilha, 2000);
 }
 setTimeout(backupDiario,3000);
 setTimeout(enviarFilaSync,2000);
