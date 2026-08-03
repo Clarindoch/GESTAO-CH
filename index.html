@@ -4139,21 +4139,27 @@ function loadAgenda(){
     if(!_agOrdem.qui) _agOrdem.qui=[];
   }catch(e){ _agOrdem={ter:[],qua:[],qui:[]}; }
 
-  // Buscar da planilha para sincronizar (sobrepõe local se houver versão mais recente)
+  // Sincronizar com planilha
   if(_gasUrl){
     gasFetch('acao=LER_AGENDA')
       .then(function(res){
         if(res.ok && res.data && res.data.agenda){
           try{
             var ag = JSON.parse(res.data.agenda);
-            if(ag && (ag.ter||ag.qua||ag.qui)){
-              _agOrdem = {
-                ter: ag.ter||[],
-                qua: ag.qua||[],
-                qui: ag.qui||[]
-              };
+            var temDados = ag && ((ag.ter&&ag.ter.length)||(ag.qua&&ag.qua.length)||(ag.qui&&ag.qui.length));
+            if(temDados){
+              // Planilha tem agenda — usar ela (fonte da verdade)
+              _agOrdem = { ter: ag.ter||[], qua: ag.qua||[], qui: ag.qui||[] };
               localStorage.setItem(KAG, JSON.stringify(_agOrdem));
-              renderAgendaHome(); // re-renderizar com a agenda sincronizada
+              garantirAgenda();
+              renderAgendaHome();
+            } else {
+              // Planilha vazia — fazer upload da agenda local para sincronizar outros dispositivos
+              var local = localStorage.getItem(KAG);
+              var temLocal = local && (JSON.parse(local||'{}').ter||[]).length > 0;
+              if(temLocal && _gasUrl){
+                gasFetch('acao=SALVAR_AGENDA&agenda_json='+encodeURIComponent(local)).catch(function(){});
+              }
             }
           }catch(e){}
         }
@@ -4173,14 +4179,15 @@ function saveAgenda(){
 }
 
 function reorganizarAgenda(){
-  // Distribui clientes ativos igualmente nos 3 dias
-  var ativos = _cls.filter(function(cl){ return clienteAtivo(cl.id); });
+  // Redistribui servicos ativos igualmente nos 3 dias
+  var statusFinalizado = ['deferido','indeferido','restituido_doc'];
+  var servAtivos = _servs.filter(function(s){ return statusFinalizado.indexOf(s.status)<0; });
   _agOrdem = {ter:[], qua:[], qui:[]};
   var dias = ['ter','qua','qui'];
-  ativos.forEach(function(cl,i){ _agOrdem[dias[i%3]].push(cl.id); });
-  saveAgenda();
+  servAtivos.forEach(function(s,i){ _agOrdem[dias[i%3]].push(s.id); });
+  saveAgenda(); // salva local E na planilha
   renderAgendaHome();
-  toast('Agenda reorganizada!','ok');
+  toast('Agenda reorganizada e sincronizada!','ok');
 }
 
 function garantirAgenda(){
@@ -4570,6 +4577,7 @@ function importarDaPlanilha(){
         renderLista();
         renderInicio();
         renderAgendaHome();
+        renderCalendario(); // re-renderizar calendário com aniversários dos novos clientes
         toast('Planilha: +'+novos+' novo(s), '+atualizados+' atualizado(s)','ok');
       } else {
         toast('Todos os clientes ja estao sincronizados','ok');
