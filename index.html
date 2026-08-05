@@ -301,6 +301,11 @@ select.inp option{background:#fff}
           <option value="CH">&#127970; CH - Cursos e Consultorias</option>
           <option value="CTR">&#127942; CTR - Clube de Tiro</option>
         </select></div>
+      <div class="field"><label>Status do Cliente</label>
+        <select class="inp" id="f-ativo">
+          <option value="ativo">&#9989; Ativo</option>
+          <option value="inativo">&#10060; Inativo</option>
+        </select></div>
       <div class="field"><label>Codigo Personalizado <span style="font-weight:400;color:var(--dim)">(opcional — deixe vazio para gerar automatico)</span></label>
         <input class="inp" id="f-codigo-custom" placeholder="Ex: CTR-005 ou CH-012" oninput="this.value=this.value.toUpperCase()">
       </div>
@@ -419,6 +424,7 @@ select.inp option{background:#fff}
     <button class="btn b-out b-sm" onclick="ir('lista')">&#8592; Voltar</button>
     <button class="btn b-blue b-sm" onclick="editarAtual()">&#9998; Editar</button>
     <button class="btn b-gold b-sm" onclick="abrirEditarId(_editId)">&#128273; Editar Codigo</button>
+    <button class="btn b-out b-sm" id="btn-toggle-ativo" onclick="toggleAtivoCliente(_editId)">&#9989; Ativo</button>
     <button class="btn b-green b-sm" onclick="abrirNovoServicoCliente(_editId)">&#128193; + Servico</button>
     <button class="btn b-gold b-sm" onclick="irDocumentosCliente()">&#128196; Documentos</button>
     <button class="btn b-out b-sm" onclick="gerarFicha()">&#128203; Gerar Ficha</button>
@@ -634,6 +640,23 @@ function processarRequisicao(params) {
     return {ok: true, data: {clientes: res}};
   }
 
+  // UPDATE_CAMPO (atualiza campo específico sem sobrescrever a linha toda)
+  if (acao === 'UPDATE_CAMPO') {
+    var dadosCampo = sheet.getDataRange().getValues();
+    var cabCampo = dadosCampo[0].map(function(c){ return String(c).toLowerCase().replace(/ /g,'_'); });
+    for (var i = 1; i < dadosCampo.length; i++) {
+      if (String(dadosCampo[i][2]) === id) {
+        Object.keys(params).forEach(function(k){
+          if(k==='acao'||k==='sheet'||k==='id') return;
+          var colIdx = cabCampo.indexOf(k.toLowerCase());
+          if(colIdx >= 0) sheet.getRange(i+1, colIdx+1).setValue(params[k]);
+        });
+        return {ok: true, data: {updated_campo: id}};
+      }
+    }
+    return {ok: true, data: {nao_encontrado: id}};
+  }
+
   // UPDATE_PASTA (so atualiza colunas de pasta)
   if (acao === 'UPDATE_PASTA') {
     var dados = sheet.getDataRange().getValues();
@@ -846,7 +869,7 @@ function montarLinha(params, sheetName) {
       params.telefone, params.email, params.endereco, params.cidade, params.cep,
       params.prop_nome, params.prop_cpf, params.prop_rg, params.prop_orgao,
       params.endereco2, params.cidade2, params.cep2,
-      params.gsenha, params.obs, params.criado, params.atualizado||'',
+      params.gsenha, params.ativo||'ativo', params.obs, params.criado, params.atualizado||'',
       params.pasta_id||'', params.pasta_url||''
     ];
   }
@@ -1327,6 +1350,7 @@ function limparForm(){
    'f-civil','f-prof','f-pai','f-mae','f-titulo','f-tel','f-email',
    'f-end','f-cidade','f-cep','f-pnome','f-pcpf','f-prg',   'f-end2','f-cidade2','f-cep2','f-obs'].forEach(function(id){ set(id,''); });
   set('f-tipo','CH');
+  set('f-ativo','ativo');
   set('f-codigo-custom','');
   set('cad-tit','+ Novo Cliente');
   var bs = document.getElementById('btn-salvar'); if(bs) bs.textContent = 'Salvar Cliente';
@@ -1437,6 +1461,7 @@ function salvar(){
     prop_nome:g('f-pnome'), prop_cpf:g('f-pcpf'), prop_rg:g('f-prg'), prop_orgao:g('f-porgao'),
     endereco2:g('f-end2'), cidade2:g('f-cidade2'), cep2:g('f-cep2'),
     obs:g('f-obs'),
+    ativo: g('f-ativo')||'ativo',
     pasta_id: cEx.pastaId||'', pasta_url: cEx.pastaUrl||'',
     criado: isNovo ? hoje() : (cEx.criado||hoje()),
     atualizado: hoje()
@@ -1468,7 +1493,7 @@ function editarAtual(){
   var cl = _cls.find(function(c){ return c.id===_editId; }); if(!cl) return;
 
   var m = {
-    'f-nome':cl.nome,'f-cpf':cl.cpf,'f-gsenha':cl.gsenha,    'f-rg':cl.rg,'f-orgao':cl.orgao,'f-rg-emissao':cl.rgEmissao||'','f-nasc':cl.nascimento,
+    'f-nome':cl.nome,'f-cpf':cl.cpf,'f-gsenha':cl.gsenha,'f-ativo':cl.ativo||'ativo',    'f-rg':cl.rg,'f-orgao':cl.orgao,'f-rg-emissao':cl.rgEmissao||'','f-nasc':cl.nascimento,
     'f-natural':cl.naturalidade,'f-civil':cl.estado_civil,'f-prof':cl.profissao,
     'f-pai':cl.pai,'f-mae':cl.mae,'f-titulo':cl.titulo,
     'f-tel':cl.telefone,'f-email':cl.email,
@@ -1807,12 +1832,21 @@ function proximaPagina(){ _paginaAtual++; renderPagina(); }
 function rowCli(cl){
   var ctr=cl.tipo==='CTR';
   var cor=ctr?'var(--green)':'var(--blue)';
+  var inativoCl = (cl.ativo||'ativo') === 'inativo';
+  var btnToggle = document.getElementById('btn-toggle-ativo');
+  if(btnToggle){
+    btnToggle.textContent = inativoCl ? '\u2705 Ativar' : '\u274C Inativar';
+    btnToggle.style.borderColor = inativoCl ? 'var(--green)' : 'var(--red)';
+    btnToggle.style.color = inativoCl ? 'var(--green)' : 'var(--red)';
+  }
   var bg =ctr?'var(--green2)':'var(--blue2)';
   var pts=cl.nome.split(' ');
   var av=((pts[0]||'')[0]||'')+((pts[1]||pts[0]||'')[0]||'');
   var d=document.createElement('div');
-  d.className='cli-row';
+  var inativo = (cl.ativo||'ativo') === 'inativo';
+  d.className='cli-row'+(inativo?' cli-inativo':'');
   d.setAttribute('data-id',cl.id);
+  if(inativo) d.style.opacity='0.5';
   d.innerHTML='<div class="cli-av" style="background:'+bg+';color:'+cor+';border-color:'+cor+'55">'+av.toUpperCase()+'</div>'
     +'<div style="flex:1;min-width:0">'
     +'<div class="cli-nome">'+cl.nome+'</div>'
@@ -1834,6 +1868,13 @@ function verCliente(id){
   _editId=id; ir('detalhe');
   var ctr=cl.tipo==='CTR';
   var cor=ctr?'var(--green)':'var(--blue)';
+  var inativoCl = (cl.ativo||'ativo') === 'inativo';
+  var btnToggle = document.getElementById('btn-toggle-ativo');
+  if(btnToggle){
+    btnToggle.textContent = inativoCl ? '\u2705 Ativar' : '\u274C Inativar';
+    btnToggle.style.borderColor = inativoCl ? 'var(--green)' : 'var(--red)';
+    btnToggle.style.color = inativoCl ? 'var(--green)' : 'var(--red)';
+  }
   var cor2=ctr?'#0f4028':'#0d3f6e';
   var h='<div class="det-hdr" style="background:linear-gradient(135deg,'+cor+','+cor2+')">'
     +'<div class="det-nome">'+cl.nome+'</div>'
@@ -2159,12 +2200,13 @@ function verCliente(id){
 
 // =========== STATS ===========
 function atualizarStats(){
-  var t=_cls.length;
+  var ativos = _cls.filter(function(c){ return (c.ativo||'ativo')==='ativo'; });
+  var t = ativos.length;
   function s(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; }
   s('s-total',t);
-  s('s-ch',_cls.filter(function(c){return c.tipo==='CH';}).length);
-  s('s-ctr',_cls.filter(function(c){return c.tipo==='CTR';}).length);
-  s('tb-count',t+' cliente'+(t===1?'':'s'));
+  s('s-ch',ativos.filter(function(c){return c.tipo==='CH';}).length);
+  s('s-ctr',ativos.filter(function(c){return c.tipo==='CTR';}).length);
+  s('tb-count',t+' cliente'+(t===1?'':'s')+(_cls.length>t?' ('+((_cls.length-t)+' inativo(s))'):''));
 }
 
 // =========== CONFIG ===========
@@ -2707,11 +2749,24 @@ function badgesPrazoServico(s){
   return '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">'+badges.join('')+'</div>';
 }
 
+function toggleAtivoCliente(cliId){
+  var cl = _cls.find(function(c){ return c.id===cliId; }); if(!cl) return;
+  var novoStatus = (cl.ativo||'ativo') === 'ativo' ? 'inativo' : 'ativo';
+  cl.ativo = novoStatus;
+  saveClientes();
+  enviarGAS({id:cliId, ativo:novoStatus, sheet:'Clientes'}, 'UPDATE_CAMPO', 'Clientes');
+  verCliente(cliId);
+  toast(novoStatus==='inativo' ? 'Cliente marcado como INATIVO' : 'Cliente marcado como ATIVO', 'ok');
+  atualizarStats();
+  renderAgendaHome();
+}
+
 function calcularAlertas(){
   var alertas = [];
 
   // PRAZO 1: cliente sem serviço — 7 dias para criar serviço
   _cls.forEach(function(cl){
+    if((cl.ativo||'ativo') !== 'ativo') return; // ignorar inativos
     var temServ = _servs.some(function(s){ return s.cliId===cl.id; });
     if(!temServ){
       var dias = diasDesde(cl.criado);
@@ -3667,6 +3722,15 @@ function gerarFicha(id){
     +'<div>Ficha gerada em</div><div style="font-weight:700">'+hoje2+'</div>'
     +'</div>'
     +'</div>'
+    // GOV.BR — DESTAQUE NO INÍCIO (antes dos dados pessoais)
+    +(cl.gsenha?
+      '<div style="background:#fffbea;border:2px solid #e8c84a;border-radius:8px;padding:14px 18px;margin-bottom:18px">'
+      +'<div style="font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#8a6a00;margin-bottom:10px">&#127979; Acesso GOV.BR</div>'
+      +'<table style="width:100%;border-collapse:collapse">'
+      +linhaTabela('CPF (Login)',cl.cpf)
+      +linhaTabela('Senha',cl.gsenha)
+      +'</table>'
+      +'</div>':'')
     // Dados pessoais
     +'<div style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:'+corTipo+';margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid '+corTipo+'">Dados Pessoais</div>'
     +'<table style="width:100%;border-collapse:collapse;margin-bottom:16px">'
@@ -3701,12 +3765,6 @@ function gerarFicha(id){
       +linhaTabela('RG',cl.prop_rg+(cl.prop_orgao?' / '+cl.prop_orgao:''))
       +'</table>':'')
     // GOV.BR
-    +(cl.gsenha?
-      '<div style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#b8902a;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid #e8d5a0">GOV.BR</div>'
-      +'<table style="width:100%;border-collapse:collapse;margin-bottom:16px">'
-      +linhaTabela('CPF Login',cl.cpf)
-      +linhaTabela('Senha',cl.gsenha)
-      +'</table>':'')
     // Serviços
     +servHtml
     +pastaHtml
@@ -4245,7 +4303,7 @@ function renderAgendaHome(){
 
   // Aviso de clientes sem servico
   var semServico = _cls.filter(function(cl){
-    return !_servs.some(function(s){ return s.cliId===cl.id; });
+    return (cl.ativo||'ativo')==='ativo' && !_servs.some(function(s){ return s.cliId===cl.id; });
   });
   var avisoEl = document.getElementById('ag-aviso-sem-servico');
   if(!avisoEl){
@@ -4537,6 +4595,7 @@ function importarDaPlanilha(){
           cidade2:     String(r.cidade2||r.CIDADE2||'').trim(),
           cep2:        String(r.cep2||r.CEP2||'').trim(),
           gsenha:      String(r.gsenha||r.GSENHA||r.gov_senha||'').trim(),
+          ativo:       String(r.ativo||r.ATIVO||'ativo').trim()||'ativo',
           obs:         String(r.obs||r.OBS||'').trim(),
           pastaId:     String(r.pasta_id||r.PASTA_ID||'').trim(),
           pastaUrl:    String(r.pasta_url||r.PASTA_URL||'').trim(),
