@@ -1582,12 +1582,39 @@ var DIAS_TRAB = [2,3,4]; // Ter=2, Qua=3, Qui=4
 
 function salvarAnotacao(){
   var el=document.getElementById('anotacoes'); if(!el) return;
-  localStorage.setItem('gch_anotacao', el.value);
+  var texto = el.value;
+  localStorage.setItem('gch_anotacao', texto);
+
+  // Sincronizar com planilha (debounce de 2s para não sobrecarregar)
+  clearTimeout(salvarAnotacao._timer);
+  salvarAnotacao._timer = setTimeout(function(){
+    if(!_gasUrl) return;
+    gasFetch('acao=SALVAR_CONFIG&anotacao_rapida='+encodeURIComponent(texto))
+      .catch(function(){});
+  }, 2000);
 }
 
 function carregarAnotacao(){
   var el=document.getElementById('anotacoes'); if(!el) return;
+  // Mostrar local imediatamente
   el.value = localStorage.getItem('gch_anotacao')||'';
+
+  // Buscar da planilha para sincronizar
+  if(!_gasUrl) return;
+  gasFetch('acao=LER_CONFIG')
+    .then(function(res){
+      if(!res.ok || !res.data || !res.data.config) return;
+      var anotacao = res.data.config['anotacao_rapida'];
+      if(anotacao !== undefined && anotacao !== null){
+        var local = localStorage.getItem('gch_anotacao')||'';
+        // Usar a versão da planilha (fonte da verdade entre dispositivos)
+        if(String(anotacao) !== local){
+          el.value = String(anotacao);
+          localStorage.setItem('gch_anotacao', String(anotacao));
+        }
+      }
+    })
+    .catch(function(){});
 }
 
 function calcularEscala(){
