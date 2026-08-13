@@ -718,6 +718,34 @@ function processarRequisicao(params) {
   return {ok: true, data: {inserted: id}};
 }
 
+// ========== FORMATAR DATA PARA DOCUMENTOS ==========
+function formatarDataDoc(valor) {
+  if (!valor) return '';
+  var s = String(valor).trim();
+
+  // Ja esta no formato DD/MM/AAAA
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+
+  // Formato AAAA-MM-DD (ISO simples)
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    var p = s.slice(0, 10).split('-');
+    return p[2] + '/' + p[1] + '/' + p[0];
+  }
+
+  // Objeto Date ou string ISO completa (ex: 1987-12-20T02:00:00.000Z)
+  try {
+    var d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      var dia  = String(d.getDate()).padStart(2,'0');
+      var mes  = String(d.getMonth()+1).padStart(2,'0');
+      var ano  = d.getFullYear();
+      return dia + '/' + mes + '/' + ano;
+    }
+  } catch(e) {}
+
+  return s; // retorna como veio se nao conseguiu formatar
+}
+
 // ========== GERAR DOCUMENTO (Mala Direta) ==========
 function gerarDoc(params) {
   var docId          = params.docId          || '';
@@ -766,6 +794,12 @@ function gerarDoc(params) {
     var copia    = template.makeCopy(nomeDoc, pasta);
     var doc      = DocumentApp.openById(copia.getId());
     var body     = doc.getBody();
+
+    // Formatar campos de data para DD/MM/AAAA antes de substituir
+    var camposData = ['NASCIMENTO', 'RG_EMISSAO', 'DATA_HOJE'];
+    camposData.forEach(function(campo){
+      if(params[campo]) params[campo] = formatarDataDoc(params[campo]);
+    });
 
     var vars = ['NOME','CPF','RG','ORGAO','RG_EMISSAO','NASCIMENTO','NATURALIDADE',
                 'ESTADO_CIVIL','PROFISSAO','ENDERECO','CIDADE','CEP',
