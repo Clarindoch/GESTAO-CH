@@ -630,7 +630,19 @@ function processarRequisicao(params) {
     var idsVistos = {};
     for (var i = 1; i &lt; dados.length; i++) {
       var obj = {};
-      cab.forEach(function(c,j){ obj[String(c).toLowerCase().replace(/ /g,'_')] = dados[i][j]; });
+      cab.forEach(function(c,j){
+        var chave = String(c).toLowerCase().replace(/ /g,'_');
+        var val = dados[i][j];
+        if(val instanceof Date){
+          var dia = String(val.getDate()).padStart(2,'0');
+          var mes = String(val.getMonth()+1).padStart(2,'0');
+          var ano = val.getFullYear();
+          val = dia+'/'+mes+'/'+ano;
+        } else {
+          val = (val===null||val===undefined)?'':val;
+        }
+        obj[chave] = val;
+      });
       var idObj = String(obj['id'] || '').trim();
       if(!idObj) continue; // ignorar linhas sem ID
       if(idsVistos[idObj]) continue; // pular duplicado
@@ -3233,7 +3245,7 @@ function gerarDocumentos(modo){
       nomeDoc:(SIGLAS_DOCS[tipo]||NOMES_DOCS[tipo])+' - '+(cl.nome||'').toUpperCase(),
       modo:modo,
       NOME:cl.nome||'', CPF:cl.cpf||'', RG:cl.rg||'', ORGAO:cl.orgao||'', RG_EMISSAO:cl.rgEmissao||'',
-      NASCIMENTO:cl.nascimento||'', NATURALIDADE:cl.naturalidade||'',
+      NASCIMENTO:formatarDataParaPlanilha(cl.nascimento||''), NATURALIDADE:cl.naturalidade||'',
       ESTADO_CIVIL:cl.estado_civil||'', PROFISSAO:cl.profissao||'',
       ENDERECO:cl.endereco||'', CIDADE:cl.cidade||'', CEP:cl.cep||'',
       TELEFONE:cl.telefone||'', EMAIL:cl.email||'', TITULO:cl.titulo||'',
@@ -3878,12 +3890,30 @@ var _servCliId  = null;
 
 function formatarDataParaPlanilha(v){
   if(!v) return '';
-  if(/^\d{2}\/\d{2}\/\d{4}$/.test(v)) return v;
-  if(/^\d{4}-\d{2}-\d{2}/.test(String(v))){
-    var p=String(v).split('T')[0].split('-');
+  var s = String(v).trim();
+
+  // Ja no formato DD/MM/AAAA — retornar direto
+  if(/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+
+  // Formato ISO simples AAAA-MM-DD (ex: 1987-12-20)
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)){
+    var p = s.split('T')[0].split('-');
     return p[2]+'/'+p[1]+'/'+p[0];
   }
-  return String(v);
+
+  // Objeto Date convertido para string (ex: "Sat Dec 20 1987 00:00:00")
+  // Tentar parsear como Date
+  try{
+    var d = new Date(s);
+    if(!isNaN(d.getTime()) && d.getFullYear() > 1900){
+      var dia = String(d.getDate()).padStart(2,'0');
+      var mes = String(d.getMonth()+1).padStart(2,'0');
+      var ano = d.getFullYear();
+      return dia+'/'+mes+'/'+ano;
+    }
+  }catch(e){}
+
+  return s;
 }
 
 function dadosParaMaiusculo(obj){
