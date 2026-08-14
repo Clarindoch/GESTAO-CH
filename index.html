@@ -255,11 +255,25 @@ select.inp option{background:#fff}
     <div id="alertas-home"></div>
   </div>
 
-  <!-- Anotacoes rapidas -->
+  <!-- Anotacoes rapidas - sistema de notas -->
   <div class="card">
-    <div class="sec">&#128221; Anotacoes Rapidas</div>
-    <textarea class="inp inp-ta" id="anotacoes" placeholder="Digite suas anotacoes aqui... (salvo automaticamente)"
-      oninput="salvarAnotacao()" style="min-height:90px;resize:vertical"></textarea>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="sec" style="margin:0;border:0;padding:0">&#128221; Anotacoes Rapidas</div>
+      <button class="btn b-blue b-xs" onclick="abrirNovaAnotacao()">&#43; Nova Nota</button>
+    </div>
+    <!-- Input rápido -->
+    <div id="nova-anotacao-wrap" style="display:none;margin-bottom:12px">
+      <textarea class="inp inp-ta" id="nova-anotacao-txt" placeholder="Digite sua nota aqui..." style="min-height:70px;margin-bottom:8px"></textarea>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn b-out b-xs" onclick="fecharNovaAnotacao()">Cancelar</button>
+        <button class="btn b-green b-xs" onclick="salvarNovaAnotacao()">&#128190; Salvar</button>
+      </div>
+    </div>
+    <!-- Lista de notas -->
+    <div id="lista-anotacoes"></div>
+    <div id="lista-anotacoes-vazio" style="font-size:12px;color:var(--muted);text-align:center;padding:12px 0;display:none">
+      Nenhuma nota ainda. Clique em "+ Nova Nota" para começar.
+    </div>
   </div>
 
   <!-- Calendario / Lembretes -->
@@ -542,7 +556,8 @@ function processarRequisicao(params) {
     }
     var chavesConfig = ['doc-seg-acervo','doc-guarda-acervo','doc-cinco-anos','doc-residencia','doc-inexistencia',
       'doc-pasta-raiz','doc-pasta-raiz-id','doc-pasta-raiz-ctr','doc-pasta-raiz-ctr-id',
-      'doc-pasta-raiz-ch','doc-pasta-raiz-ch-id'];
+      'doc-pasta-raiz-ch','doc-pasta-raiz-ch-id',
+      'anotacao_rapida','agenda_ordem'];
     var dadosCfg = sheetCfg.getDataRange().getValues();
     chavesConfig.forEach(function(chave) {
       var valor = params[chave] || '';
@@ -1626,42 +1641,124 @@ function irCadastroNovo(){
 // =========== TELA INICIAL COMPLETA ===========
 var DIAS_TRAB = [2,3,4]; // Ter=2, Qua=3, Qui=4
 
-function salvarAnotacao(){
-  var el=document.getElementById('anotacoes'); if(!el) return;
-  var texto = el.value;
-  localStorage.setItem('gch_anotacao', texto);
+var KNOT = 'gch_notas';
+var _notas = [];
 
-  // Sincronizar com planilha (debounce de 2s para não sobrecarregar)
-  clearTimeout(salvarAnotacao._timer);
-  salvarAnotacao._timer = setTimeout(function(){
-    if(!_gasUrl) return;
-    gasFetch('acao=SALVAR_CONFIG&anotacao_rapida='+encodeURIComponent(texto))
-      .catch(function(){});
-  }, 2000);
+function loadNotas(){
+  try{ _notas = JSON.parse(localStorage.getItem(KNOT)||'[]'); }catch(e){ _notas=[]; }
+}
+function saveNotas(){
+  localStorage.setItem(KNOT, JSON.stringify(_notas));
+  // Sincronizar com planilha
+  if(_gasUrl){
+    clearTimeout(saveNotas._t);
+    saveNotas._t = setTimeout(function(){
+      gasFetch('acao=SALVAR_CONFIG&anotacao_rapida='+encodeURIComponent(JSON.stringify(_notas)))
+        .catch(function(){});
+    }, 2000);
+  }
+}
+
+function abrirNovaAnotacao(){
+  var w = document.getElementById('nova-anotacao-wrap');
+  var t = document.getElementById('nova-anotacao-txt');
+  if(w) w.style.display='block';
+  if(t){ t.value=''; t.focus(); }
+}
+function fecharNovaAnotacao(){
+  var w = document.getElementById('nova-anotacao-wrap');
+  if(w) w.style.display='none';
+}
+function salvarNovaAnotacao(){
+  var t = document.getElementById('nova-anotacao-txt');
+  var texto = t ? t.value.trim() : '';
+  if(!texto){ toast('Digite algo antes de salvar','err'); return; }
+  _notas.unshift({ id: uid(), texto: texto, data: hoje(), fixada: false });
+  saveNotas();
+  fecharNovaAnotacao();
+  renderNotas();
+  toast('Nota salva!','ok');
+}
+
+function toggleFixarNota(id){
+  var n = _notas.find(function(x){ return x.id===id; });
+  if(!n) return;
+  n.fixada = !n.fixada;
+  // Fixadas sobem para o topo
+  _notas.sort(function(a,b){ return (b.fixada?1:0)-(a.fixada?1:0); });
+  saveNotas();
+  renderNotas();
+}
+function excluirNota(id){
+  if(!confirm('Excluir esta nota?')) return;
+  _notas = _notas.filter(function(x){ return x.id!==id; });
+  saveNotas();
+  renderNotas();
+}
+
+function renderNotas(){
+  var lista = document.getElementById('lista-anotacoes');
+  var vazio = document.getElementById('lista-anotacoes-vazio');
+  if(!lista) return;
+
+  if(!_notas.length){
+    lista.innerHTML='';
+    if(vazio) vazio.style.display='block';
+    return;
+  }
+  if(vazio) vazio.style.display='none';
+
+  lista.innerHTML = _notas.map(function(n){
+    var corFundo = n.fixada ? '#fffbea' : '#fff';
+    var bordaCor = n.fixada ? '#f0d060' : 'var(--border)';
+    return '<div style="background:'+corFundo+';border:1.5px solid '+bordaCor+';border-radius:var(--r2);padding:10px 12px;margin-bottom:8px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
+      +'<div style="flex:1;font-size:13px;line-height:1.5;white-space:pre-wrap">'+n.texto.replace(/</g,'&lt;')+'</div>'
+      +'<div style="display:flex;gap:4px;flex-shrink:0;margin-top:2px">'
+      +'<button onclick="toggleFixarNota(\''+n.id+'\')" title="'+(n.fixada?'Desafixar':'Fixar')+'" style="background:none;border:none;cursor:pointer;font-size:16px;line-height:1;opacity:'+(n.fixada?'1':'0.4')+'">&#128204;</button>'
+      +'<button onclick="excluirNota(\''+n.id+'\')" title="Excluir" style="background:none;border:none;cursor:pointer;font-size:15px;line-height:1;color:var(--red);opacity:0.6">&#128465;</button>'
+      +'</div>'
+      +'</div>'
+      +'<div style="font-size:10px;color:var(--muted);margin-top:6px">'+n.data+(n.fixada?' &nbsp;&#128204; Fixada':'')+'</div>'
+      +'</div>';
+  }).join('');
 }
 
 function carregarAnotacao(){
-  var el=document.getElementById('anotacoes'); if(!el) return;
-  // Mostrar local imediatamente
-  el.value = localStorage.getItem('gch_anotacao')||'';
+  // Carregar notas do localStorage primeiro
+  loadNotas();
+  renderNotas();
 
-  // Buscar da planilha para sincronizar
+  // Sincronizar com planilha
   if(!_gasUrl) return;
   gasFetch('acao=LER_CONFIG')
     .then(function(res){
       if(!res.ok || !res.data || !res.data.config) return;
-      var anotacao = res.data.config['anotacao_rapida'];
-      if(anotacao !== undefined && anotacao !== null){
-        var local = localStorage.getItem('gch_anotacao')||'';
-        // Usar a versão da planilha (fonte da verdade entre dispositivos)
-        if(String(anotacao) !== local){
-          el.value = String(anotacao);
-          localStorage.setItem('gch_anotacao', String(anotacao));
+      var raw = res.data.config['anotacao_rapida'];
+      if(!raw) return;
+      try{
+        var notasPlanilha = JSON.parse(String(raw));
+        if(Array.isArray(notasPlanilha) && notasPlanilha.length >= _notas.length){
+          _notas = notasPlanilha;
+          localStorage.setItem(KNOT, JSON.stringify(_notas));
+          renderNotas();
+        }
+      }catch(e){
+        // Formato antigo (texto simples) — migrar para nota única
+        if(typeof raw === 'string' && raw.trim() && !raw.startsWith('[')){
+          if(!_notas.length){
+            _notas = [{ id:uid(), texto:raw.trim(), data:hoje(), fixada:false }];
+            saveNotas();
+            renderNotas();
+          }
         }
       }
     })
     .catch(function(){});
 }
+
+// Manter compatibilidade com chamadas antigas
+function salvarAnotacao(){ saveNotas(); }
 
 function calcularEscala(){
   // Distribui clientes ativos igualmente entre Ter/Qua/Qui
@@ -1681,6 +1778,7 @@ function calcularEscala(){
 
 function renderInicio(){
   carregarAnotacao();
+  renderNotas();
   renderAgendaHome();
 
   // Delegacao de clique para cards de aniversario
@@ -5576,6 +5674,7 @@ function acordarGAS(callback){
 loadExcluidos();
 loadAuditoria();
 loadLembretes();
+loadNotas();
 loadAll();
 loadServicos();
 loadDocs();
