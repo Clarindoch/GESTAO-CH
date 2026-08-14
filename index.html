@@ -2217,9 +2217,21 @@ function verCliente(id){
         var cid=b.getAttribute('data-criar-pasta');
         var cl2=_cls.find(function(c){ return c.id===cid; }); if(!cl2) return;
         if(!_gasUrl){ toast('Configure a URL do GAS primeiro','err'); return; }
-        var pastaRaizId=_cfgDocs['doc-pasta-raiz-id']||extrairIdDaUrl((_cfgDocs['doc-pasta-raiz']||''));
-        if(!pastaRaizId){ toast('Configure a pasta raiz no Config','err'); return; }
-        toast('Criando pasta...','warn');
+
+        // Usar pasta raiz correta conforme tipo do cliente (CTR ou CH)
+        var pastaRaizId = '';
+        if(cl2.tipo === 'CTR'){
+          pastaRaizId = _cfgDocs['doc-pasta-raiz-ctr-id'] || extrairIdDaUrl(_cfgDocs['doc-pasta-raiz-ctr']||'');
+        } else if(cl2.tipo === 'CH'){
+          pastaRaizId = _cfgDocs['doc-pasta-raiz-ch-id'] || extrairIdDaUrl(_cfgDocs['doc-pasta-raiz-ch']||'');
+        }
+        // Fallback para pasta raiz geral se não encontrar a específica
+        if(!pastaRaizId){
+          pastaRaizId = _cfgDocs['doc-pasta-raiz-id'] || extrairIdDaUrl(_cfgDocs['doc-pasta-raiz']||'');
+        }
+        if(!pastaRaizId){ toast('Configure a pasta raiz CTR/CH no Config','err'); return; }
+
+        toast('Criando pasta em '+(cl2.tipo==='CTR'?'CTR':'CH')+'...','warn');
         var qs='acao=CRIAR_PASTA&pastaRaiz='+encodeURIComponent(pastaRaizId)+'&nomePasta='+encodeURIComponent(nomePasta(cl2));
         gasFetch(qs)
           .then(function(res){
