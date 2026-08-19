@@ -1034,6 +1034,7 @@ function jsonResponse(obj) {
       <button class="btn b-gold b-sm" onclick="corrigirIdsRepetidos()">&#128295; Corrigir IDs Duplicados</button>
       <button class="btn b-blue b-sm" onclick="syncCompleto()">&#128260; Sincronizar Tudo</button>
       <button class="btn b-green b-sm" onclick="importarDaPlanilha();toast('Importando...','warn')">&#128229; Importar da Planilha</button>
+      <button class="btn b-sm" onclick="forceSyncTotal()" style="background:#dc2626;color:#fff;border-color:#dc2626;font-weight:800">&#9889; Reimportar Tudo</button>
       <button class="btn b-gold b-sm" onclick="varrerLocalStorage()">&#128269; Recuperar Dados do Navegador</button>
       <button class="btn b-out b-sm" onclick="verExcluidos()">&#128465; Ver/Limpar Exclusoes</button>
       <button class="btn b-out b-sm" onclick="diagnosticarSistema()">&#128269; Diagnostico</button>
@@ -5368,6 +5369,110 @@ function verExcluidos(){
     saveExcluidos();
     toast('Lista de exclusoes limpa!','ok');
   }
+}
+
+function forceSyncTotal(){
+  if(!confirm('Isso vai APAGAR todos os dados locais e reimportar tudo da planilha do zero.\n\nContinuar?')) return;
+
+  // Limpar tudo localmente
+  _cls = [];
+  _servs = [];
+  _excluidos = {clientes:[], servicos:[]};
+  saveClientes();
+  saveServicos();
+  saveExcluidos();
+  localStorage.removeItem(KC);
+  localStorage.removeItem(KS);
+  localStorage.removeItem(KEXC);
+
+  toast('Dados locais limpos. Importando da planilha...','warn');
+
+  // Reimportar do zero
+  gasFetch('acao=GET_ALL&sheet=Clientes')
+    .then(function(res){
+      if(!res.ok || !res.data){ toast('Erro ao buscar planilha','err'); return; }
+      var remotos = res.data.clientes || [];
+      toast('Planilha retornou '+remotos.length+' clientes. Processando...','warn');
+
+      remotos.forEach(function(rem){
+        var r={};
+        Object.keys(rem).forEach(function(k){ r[k.toLowerCase().replace(/ /g,'_')]=rem[k]; });
+        var id   = String(r.id||'').trim();
+        var nome = String(r.nome||'').trim();
+        if(!id||!nome) return;
+        _cls.push({
+          id:id, seq:parseInt(r.seq||0,10)||0,
+          clienteId:String(r.cliente_id||r.clienteid||'').trim(),
+          tipo:String(r.tipo||'CH').trim(), nome:nome,
+          cpf:String(r.cpf||'').trim(), rg:String(r.rg||'').trim(),
+          orgao:String(r.orgao||'').trim(),
+          rgEmissao:String(r.rgemissao||r.rg_emissao||'').trim(),
+          nascimento:formatarDataParaPlanilha(String(r.nascimento||'').trim()),
+          naturalidade:String(r.naturalidade||'').trim(),
+          estado_civil:String(r.estado_civil||'').trim(),
+          profissao:String(r.profissao||'').trim(),
+          pai:String(r.pai||'').trim(), mae:String(r.mae||'').trim(),
+          titulo:String(r.titulo||'').trim(),
+          telefone:String(r.telefone||'').trim(), email:String(r.email||'').trim(),
+          endereco:String(r.endereco||'').trim(), cidade:String(r.cidade||'').trim(),
+          cep:String(r.cep||'').trim(),
+          prop_nome:String(r.prop_nome||'').trim(), prop_cpf:String(r.prop_cpf||'').trim(),
+          prop_rg:String(r.prop_rg||'').trim(), prop_orgao:String(r.prop_orgao||'').trim(),
+          endereco2:String(r.endereco2||'').trim(), cidade2:String(r.cidade2||'').trim(), cep2:String(r.cep2||'').trim(),
+          gsenha:String(r.gsenha||'').trim(), ativo:String(r.ativo||'ativo').trim()||'ativo',
+          obs:String(r.obs||'').trim(),
+          pastaId:String(r.pasta_id||'').trim(), pastaUrl:String(r.pasta_url||'').trim(),
+          criado:formatarDataParaPlanilha(String(r.criado||hoje()).trim()),
+          atualizado:String(r.atualizado||hoje()).trim()
+        });
+      });
+
+      recalcularIds();
+      saveClientes();
+      atualizarStats();
+      renderLista();
+      renderInicio();
+      toast('✓ Reimportado: '+_cls.length+' clientes carregados!','ok');
+    })
+    .catch(function(e){
+      toast('Erro: '+(e&&e.message?e.message:'falha de conexao'),'err');
+    });
+
+  // Reimportar serviços também
+  setTimeout(function(){
+    gasFetch('acao=GET_ALL&sheet=Servicos')
+      .then(function(res){
+        if(!res.ok||!res.data) return;
+        var remotos = res.data.clientes||[];
+        remotos.forEach(function(rem){
+          var r={};
+          Object.keys(rem).forEach(function(k){ r[k.toLowerCase().replace(/ /g,'_')]=rem[k]; });
+          var id=String(r.id||'').trim(); if(!id) return;
+          _servs.push({
+            id:id, protocolo:String(r.protocolo||'').trim(),
+            cliId:String(r.cli_id||r.cliid||'').trim(),
+            cliNome:String(r.cli_nome||r.clinome||'').trim(),
+            tipo:String(r.tipo_servico||r.tiposervico||r.tipo||'').trim(),
+            nomeServico:String(r.nome_servico||r.nomeservico||'').trim(),
+            detalhe:String(r.detalhe||'').trim(),
+            inicio:String(r.inicio||'').trim(), prazo:String(r.prazo||'').trim(),
+            status:String(r.status||'aguardando_cli').trim(),
+            obs:String(r.obs||'').trim(),
+            dataProtocolo:String(r.data_protocolo||r.dataprotocolo||'').trim(),
+            ultimoVisto:String(r.ultimo_visto||r.ultimovisto||'').trim(),
+            gruComunicada:String(r.gru_comunicada||r.grucomunicada||'').trim(),
+            gruPaga:String(r.grupaga||r.gru_paga||'').trim(),
+            criado:String(r.criado||'').trim(), atualizado:String(r.atualizado||'').trim()
+          });
+        });
+        saveServicos();
+        renderServicos();
+        renderAlertas();
+        garantirAgenda();
+        renderAgendaHome();
+        toast('✓ Servicos: '+_servs.length+' carregados!','ok');
+      }).catch(function(){});
+  }, 2000);
 }
 
 function diagnosticarSistema(){
