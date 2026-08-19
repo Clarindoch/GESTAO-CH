@@ -2899,20 +2899,30 @@ function excluirServico(id){
 }
 
 function fmtData(d){
-  if(!d) return '';
-  var p=d.split('-');
-  return p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : d;
+  try{
+    if(!d) return '';
+    var s = String(d).trim();
+    // DD/MM/AAAA — ja formatado
+    if(/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+    // AAAA-MM-DD
+    var p = s.split('-');
+    return p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : s;
+  }catch(e){ return ''; }
 }
 
 
 // =========== PRAZOS E ALERTAS ===========
 
 function diasDesde(dataStr){
-  if(!dataStr) return 999;
-  var d = new Date(dataStr.includes('/') ? dataStr.split('/').reverse().join('-') : dataStr);
-  d.setHours(0,0,0,0);
-  var h = new Date(); h.setHours(0,0,0,0);
-  return Math.max(0, Math.floor((h-d)/86400000));
+  try{
+    if(!dataStr) return 999;
+    var s = String(dataStr).trim();
+    var d = new Date(s.includes('/') ? s.split('/').reverse().join('-') : s);
+    if(isNaN(d.getTime())) return 999;
+    d.setHours(0,0,0,0);
+    var h = new Date(); h.setHours(0,0,0,0);
+    return Math.max(0, Math.floor((h-d)/86400000));
+  }catch(e){ return 999; }
 }
 
 function badgesPrazoServico(s){
@@ -5512,10 +5522,19 @@ function montarEventosCalendario(){
 }
 
 function somarDias(dataStr, dias){
-  if(!dataStr) return '';
-  var d = new Date(dataStr.length>10 ? dataStr.slice(0,10) : dataStr);
-  d.setDate(d.getDate()+dias);
-  return d.toISOString().slice(0,10);
+  try{
+    if(!dataStr) return '';
+    var s = String(dataStr).trim();
+    // Converter DD/MM/AAAA para AAAA-MM-DD
+    if(/^\d{2}\/\d{2}\/\d{4}$/.test(s)){
+      var p = s.split('/');
+      s = p[2]+'-'+p[1]+'-'+p[0];
+    }
+    var d = new Date(s.length>10 ? s.slice(0,10) : s);
+    if(isNaN(d.getTime())) return '';
+    d.setDate(d.getDate()+dias);
+    return d.toISOString().slice(0,10);
+  }catch(e){ return ''; }
 }
 
 var CORES_EVENTO = {
