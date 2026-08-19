@@ -637,17 +637,16 @@ function processarRequisicao(params) {
 
   var id = params.id || '';
 
-  // GET_ALL — com paginacao para evitar resposta muito grande no mobile
+  // GET_ALL — retorna todos sem campos vazios para minimizar tamanho da resposta
   if (acao === 'GET_ALL') {
     var dados = sheet.getDataRange().getValues();
     var cab = dados[0];
-    var idsVistos = {};
-    var pagina = parseInt(params.pagina || '0', 10);
-    var tamPagina = 25;
-
     var todos = [];
-    for (var i = 1; i < dados.length; i++) {
+    var idsVistos = {};
+
+    for (var i = 1; i &lt; dados.length; i++) {
       var obj = {};
+      var temDado = false;
       cab.forEach(function(c,j){
         var chave = String(c).toLowerCase().replace(/ /g,'_');
         var val = dados[i][j];
@@ -657,9 +656,9 @@ function processarRequisicao(params) {
           var ano = val.getFullYear();
           val = dia+'/'+mes+'/'+ano;
         } else {
-          val = (val===null||val===undefined)?'':String(val);
+          val = (val===null||val===undefined)?'':String(val).trim();
         }
-        obj[chave] = val;
+        if(val !== '') { obj[chave] = val; temDado = true; }
       });
       var idObj = String(obj['id'] || '').trim();
       if(!idObj) continue;
@@ -668,17 +667,7 @@ function processarRequisicao(params) {
       todos.push(obj);
     }
 
-    var totalPaginas = Math.ceil(todos.length / tamPagina) || 1;
-    var inicio = pagina * tamPagina;
-    var fatia = todos.slice(inicio, inicio + tamPagina);
-
-    return {ok: true, data: {
-      clientes: fatia,
-      total: todos.length,
-      pagina: pagina,
-      totalPaginas: totalPaginas,
-      temMais: (pagina + 1) < totalPaginas
-    }};
+    return {ok: true, data: {clientes: todos, total: todos.length, temMais: false}};
   }
 
 
@@ -686,12 +675,12 @@ function processarRequisicao(params) {
   if (acao === 'UPDATE_CAMPO') {
     var dadosCampo = sheet.getDataRange().getValues();
     var cabCampo = dadosCampo[0].map(function(c){ return String(c).toLowerCase().replace(/ /g,'_'); });
-    for (var i = 1; i < dadosCampo.length; i++) {
+    for (var i = 1; i &lt; dadosCampo.length; i++) {
       if (String(dadosCampo[i][2]) === id) {
         Object.keys(params).forEach(function(k){
           if(k==='acao'||k==='sheet'||k==='id') return;
           var colIdx = cabCampo.indexOf(k.toLowerCase());
-          if(colIdx >= 0) sheet.getRange(i+1, colIdx+1).setValue(params[k]);
+          if(colIdx &gt;= 0) sheet.getRange(i+1, colIdx+1).setValue(params[k]);
         });
         return {ok: true, data: {updated_campo: id}};
       }
@@ -4791,17 +4780,11 @@ function importarDaPlanilha(){
 
   var todosRemotos = [];
 
-  function buscarPaginaClientes(pagina){
-    gasFetch('acao=GET_ALL&sheet=Clientes&pagina='+pagina)
+  function buscarPaginaClientes(){
+    gasFetch('acao=GET_ALL&sheet=Clientes')
       .then(function(res){
         if(!res.ok || !res.data){ processarClientes([]); return; }
-        var fatia = res.data.clientes || [];
-        todosRemotos = todosRemotos.concat(fatia);
-        if(res.data.temMais){
-          buscarPaginaClientes(pagina + 1);
-        } else {
-          processarClientes(todosRemotos);
-        }
+        processarClientes(res.data.clientes || []);
       })
       .catch(function(e){
         var msg = e && e.message ? e.message : 'falha';
@@ -4871,7 +4854,7 @@ function importarDaPlanilha(){
     }
   }
 
-  buscarPaginaClientes(0);
+  buscarPaginaClientes();
 
   // Buscar servicos
   gasFetch('acao=GET_ALL&sheet=Servicos')
