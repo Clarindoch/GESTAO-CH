@@ -1373,8 +1373,12 @@ _gasUrl = localStorage.getItem('gch_gas')||_gasUrlPadrao;
 }
 function saveClientes(){ localStorage.setItem(KC, JSON.stringify(_cls)); atualizarStats(); }
 function uid(){ return Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8); }
-function hoje(){ return new Date().toLocaleDateString('pt-BR'); }
-function isoHoje(){ return new Date().toISOString().slice(0,10); }
+function hoje(){
+  try{ return new Date().toLocaleDateString('pt-BR'); }catch(e){ return ''; }
+}
+function isoHoje(){
+  try{ return new Date().toISOString().slice(0,10); }catch(e){ return ''; }
+}
 
 // =========== LOGIN ===========
 
@@ -3566,7 +3570,6 @@ function buscarCliente(ctx){
     lista.forEach(function(cl){
       var item=document.createElement('div');
       item.style.cssText='padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:.1s';
-      item.onmouseover=function(){this.style.background='var(--blue2)'};
       item.onmouseout=function(){this.style.background=''};
       item.innerHTML='<div style="font-size:13px;font-weight:700">'+cl.nome+'</div>'
         +'<div style="font-size:11px;color:var(--dim)">'+(cl.clienteId||cl.tipo)+(cl.cpf?' &middot; '+cl.cpf:'')+'</div>';
@@ -4039,31 +4042,34 @@ var _servEditId = null;
 var _servCliId  = null;
 
 function formatarDataParaPlanilha(v){
-  if(!v) return '';
-  var s = String(v).trim();
-
-  // Ja no formato DD/MM/AAAA — retornar direto
-  if(/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
-
-  // Formato ISO simples AAAA-MM-DD (ex: 1987-12-20)
-  if(/^\d{4}-\d{2}-\d{2}/.test(s)){
-    var p = s.split('T')[0].split('-');
-    return p[2]+'/'+p[1]+'/'+p[0];
-  }
-
-  // Objeto Date convertido para string (ex: "Sat Dec 20 1987 00:00:00")
-  // Tentar parsear como Date
   try{
-    var d = new Date(s);
-    if(!isNaN(d.getTime()) && d.getFullYear() > 1900){
-      var dia = String(d.getDate()).padStart(2,'0');
-      var mes = String(d.getMonth()+1).padStart(2,'0');
-      var ano = d.getFullYear();
-      return dia+'/'+mes+'/'+ano;
-    }
-  }catch(e){}
+    if(!v || v==='undefined' || v==='null') return '';
+    var s = String(v).trim();
+    if(!s) return '';
 
-  return s;
+    // Ja no formato DD/MM/AAAA
+    if(/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+
+    // Formato AAAA-MM-DD ou ISO completo
+    if(/^\d{4}-\d{2}-\d{2}/.test(s)){
+      var p = s.slice(0,10).split('-');
+      if(p.length===3) return p[2]+'/'+p[1]+'/'+p[0];
+    }
+
+    // Tentar como Date só se parecer uma data valida
+    if(s.length >= 8){
+      var d = new Date(s);
+      if(d && !isNaN(d.getTime()) && d.getFullYear() > 1900 && d.getFullYear() < 2100){
+        var dia = String(d.getDate()).padStart(2,'0');
+        var mes = String(d.getMonth()+1).padStart(2,'0');
+        return dia+'/'+mes+'/'+d.getFullYear();
+      }
+    }
+
+    return ''; // valor invalido — retornar vazio ao invés de propagar erro
+  }catch(e){
+    return '';
+  }
 }
 
 function dadosParaMaiusculo(obj){
@@ -4805,6 +4811,7 @@ function importarDaPlanilha(){
     if(!remotos.length){ toast('Nenhum cliente na planilha','warn'); return; }
     var novos = 0, atualizados = 0;
     remotos.forEach(function(rem){
+      try{
       var r = {};
       Object.keys(rem).forEach(function(k){ r[k.toLowerCase().replace(/ /g,'_')] = rem[k]; });
       var id        = String(r.id || r.ID || '').trim();
@@ -4848,6 +4855,7 @@ function importarDaPlanilha(){
       } else {
         _cls.push(cl); novos++;
       }
+      }catch(_eRem){ console.warn('Erro cliente:',_eRem); }
     });
     if(novos > 0 || atualizados > 0){
       recalcularIds(); saveClientes(); atualizarStats();
