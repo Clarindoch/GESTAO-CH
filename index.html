@@ -638,7 +638,7 @@ function processarRequisicao(params) {
   var id = params.id || '';
 
   // GET_ALL — retorna todos sem campos vazios para minimizar tamanho da resposta
-  if (acao === 'GET_ALL') {
+  if (acao === 'GET_TODOS' || acao === 'GET_ALL') {
     var dados = sheet.getDataRange().getValues();
     var cab = dados[0];
     var todos = [];
@@ -2477,7 +2477,7 @@ function copiarGAS(){
 function testarConexao(){
   if(!_gasUrl){ toast('Cole a URL do GAS primeiro','err'); return; }
   toast('Testando conexao...','warn');
-  gasFetch('acao=GET_ALL&sheet=Clientes')
+  gasFetch('acao=GET_TODOS&sheet=Clientes')
     .then(function(d){
       if(d.ok) toast('&#10003; Conexao OK! GAS respondendo normalmente.','ok');
       else toast('Conectou mas com erro: '+(d.error||'desconhecido'),'err');
@@ -2495,7 +2495,7 @@ function sincronizarTudo(){
   toast('Sincronizando com a planilha...','warn');
 
   // Buscar TUDO da planilha e substituir local completamente
-  gasFetch('acao=GET_ALL&sheet=Clientes')
+  gasFetch('acao=GET_TODOS&sheet=Clientes')
     .then(function(res){
       var remotos = (res.ok && res.data) ? (res.data.clientes||res.data||[]) : [];
       if(!remotos.length){ toast('Planilha retornou vazio','warn'); return; }
@@ -4802,7 +4802,7 @@ function importarDaPlanilha(){
   var todosRemotos = [];
 
   function buscarPaginaClientes(){
-    gasFetch('acao=GET_ALL&sheet=Clientes')
+    gasFetch('acao=GET_TODOS&sheet=Clientes')
       .then(function(res){
         if(!res.ok || !res.data){ processarClientes([]); return; }
         processarClientes(res.data.clientes || []);
@@ -4880,7 +4880,7 @@ function importarDaPlanilha(){
   buscarPaginaClientes();
 
   // Buscar servicos
-  gasFetch('acao=GET_ALL&sheet=Servicos')
+  gasFetch('acao=GET_TODOS&sheet=Servicos')
     .then(function(res){
       if(!res.ok || !res.data) return;
       var remotos = res.data.clientes || res.data || [];
@@ -5388,7 +5388,7 @@ function forceSyncTotal(){
   toast('Dados locais limpos. Importando da planilha...','warn');
 
   // Reimportar do zero
-  gasFetch('acao=GET_ALL&sheet=Clientes')
+  gasFetch('acao=GET_TODOS&sheet=Clientes')
     .then(function(res){
       if(!res.ok || !res.data){ toast('Erro ao buscar planilha','err'); return; }
       var remotos = res.data.clientes || [];
@@ -5440,7 +5440,7 @@ function forceSyncTotal(){
 
   // Reimportar serviços também
   setTimeout(function(){
-    gasFetch('acao=GET_ALL&sheet=Servicos')
+    gasFetch('acao=GET_TODOS&sheet=Servicos')
       .then(function(res){
         if(!res.ok||!res.data) return;
         var remotos = res.data.clientes||[];
@@ -5476,38 +5476,36 @@ function forceSyncTotal(){
 }
 
 function diagnosticarSistema(){
-  gasFetch('acao=GET_ALL&sheet=Clientes')
+  toast('Testando GAS...','warn');
+  gasFetch('acao=GET_TODOS&sheet=Clientes')
     .then(function(res){
-      var total = res.ok && res.data ? (res.data.clientes||[]).length : 0;
+      var clientes = res.ok && res.data ? (res.data.clientes||[]) : [];
+      var total = clientes.length;
+      var temMais = res.ok && res.data ? res.data.temMais : '?';
       var excCli = _excluidos.clientes.length;
       var msg = '=== DIAGNOSTICO ===\n\n'
-        + 'Planilha retornou: ' + total + ' clientes\n'
-        + 'Local tem: ' + _cls.length + ' clientes\n'
-        + 'Lista de excluidos: ' + excCli + ' IDs\n\n';
-      if(excCli > 0){
-        msg += 'ATENCAO: Ha ' + excCli + ' cliente(s) bloqueados pela lista de excluidos!\n'
-          + 'Va em Config > Ver/Limpar Exclusoes para verificar.\n\n';
-      }
-      if(total > _cls.length){
-        msg += 'PROBLEMA: Planilha tem mais clientes que o sistema mostra.\n'
-          + 'Diferenca: ' + (total - _cls.length) + ' cliente(s) faltando.\n';
+        + 'GAS retornou: ' + total + ' clientes\n'
+        + 'temMais: ' + temMais + '\n'
+        + 'Local: ' + _cls.length + ' clientes\n'
+        + 'Excluidos: ' + excCli + '\n\n';
+      if(total === 25){
+        msg += 'ATENCAO: Retornou exatamente 25!\n'
+          + 'A versao ANTIGA do GAS ainda esta rodando.\n\n'
+          + 'SOLUCAO:\n'
+          + '1. No Apps Script, clique em Implantar\n'
+          + '2. Escolha NOVA IMPLANTACAO (nao gerenciar existente)\n'
+          + '3. Configure Execute as: Me / Anyone\n'
+          + '4. Copie a NOVA URL e cole em Config';
+      } else if(total > _cls.length + excCli){
+        msg += 'PROBLEMA: Planilha tem ' + (total - _cls.length) + ' clientes a mais.';
       } else {
-        msg += 'OK: Sistema esta sincronizado.';
+        msg += 'OK: Tudo sincronizado!';
       }
       alert(msg);
     })
     .catch(function(e){
-      alert('Erro ao conectar com planilha: '+(e&&e.message?e.message:'desconhecido'));
+      alert('Erro ao conectar: '+(e&&e.message?e.message:'falha'));
     });
-}
-
-
-// =========== LOG DE AUDITORIA (blindagem contra perda de dados) ===========
-var KAUD = 'gch_auditoria';
-var _auditoria = [];
-
-function loadAuditoria(){
-  try{ _auditoria = JSON.parse(localStorage.getItem(KAUD)||'[]'); }catch(e){ _auditoria=[]; }
 }
 
 function registrarAuditoria(acao, detalhe){
