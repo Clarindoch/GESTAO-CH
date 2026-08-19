@@ -637,13 +637,16 @@ function processarRequisicao(params) {
 
   var id = params.id || '';
 
-  // GET_ALL — deduplicar por ID automaticamente
+  // GET_ALL — com paginacao para evitar resposta muito grande no mobile
   if (acao === 'GET_ALL') {
     var dados = sheet.getDataRange().getValues();
     var cab = dados[0];
-    var res = [];
     var idsVistos = {};
-    for (var i = 1; i &lt; dados.length; i++) {
+    var pagina = parseInt(params.pagina || '0', 10);
+    var tamPagina = 25;
+
+    var todos = [];
+    for (var i = 1; i < dados.length; i++) {
       var obj = {};
       cab.forEach(function(c,j){
         var chave = String(c).toLowerCase().replace(/ /g,'_');
@@ -654,18 +657,30 @@ function processarRequisicao(params) {
           var ano = val.getFullYear();
           val = dia+'/'+mes+'/'+ano;
         } else {
-          val = (val===null||val===undefined)?'':val;
+          val = (val===null||val===undefined)?'':String(val);
         }
         obj[chave] = val;
       });
       var idObj = String(obj['id'] || '').trim();
-      if(!idObj) continue; // ignorar linhas sem ID
-      if(idsVistos[idObj]) continue; // pular duplicado
+      if(!idObj) continue;
+      if(idsVistos[idObj]) continue;
       idsVistos[idObj] = true;
-      res.push(obj);
+      todos.push(obj);
     }
-    return {ok: true, data: {clientes: res}};
+
+    var totalPaginas = Math.ceil(todos.length / tamPagina) || 1;
+    var inicio = pagina * tamPagina;
+    var fatia = todos.slice(inicio, inicio + tamPagina);
+
+    return {ok: true, data: {
+      clientes: fatia,
+      total: todos.length,
+      pagina: pagina,
+      totalPaginas: totalPaginas,
+      temMais: (pagina + 1) < totalPaginas
+    }};
   }
+
 
   // UPDATE_CAMPO (atualiza campo específico sem sobrescrever a linha toda)
   if (acao === 'UPDATE_CAMPO') {
@@ -4771,122 +4786,92 @@ function syncCompleto(){
 
 // =========== IMPORTAR DA PLANILHA AO INICIAR ===========
 function importarDaPlanilha(){
-  if(!_gasUrl){
-    toast('Configure a URL do GAS primeiro em Config','err');
-    return;
-  }
+  if(!_gasUrl){ toast('Configure a URL do GAS primeiro em Config','err'); return; }
   toast('Importando da planilha...','warn');
 
-  // Buscar clientes
-  gasFetch('acao=GET_ALL&sheet=Clientes')
-    .then(function(res){
-      if(!res.ok || !res.data) return;
-      var remotos = res.data.clientes || res.data || [];
-      if(!remotos.length){ toast('Nenhum cliente na planilha','warn'); return; }
+  var todosRemotos = [];
 
-      var novos = 0, atualizados = 0;
-      remotos.forEach(function(rem){
-        // Normalizar chaves (planilha pode ter maiúsculo)
-        var r = {};
-        Object.keys(rem).forEach(function(k){ r[k.toLowerCase().replace(/ /g,'_')] = rem[k]; });
-
-        // ID interno (coluna ID/id) e ID visível (CLIENTE_ID/cliente_id)
-        var id         = String(r.id || r.ID || '').trim();
-        var clienteId  = String(r.cliente_id || r.clienteid || r.clienteId || '').trim();
-        var nome       = String(r.nome || r.NOME || '').trim();
-        if(!id || !nome) return;
-        if(_excluidos.clientes.indexOf(id)>=0) return; // ignorar — foi excluido permanentemente
-
-        var idxLocal = _cls.findIndex(function(c){ return c.id===id; });
-        var cl = {
-          id:          id,
-          seq:         parseInt(r.seq||r.SEQ||0,10) || 0,
-          clienteId:   clienteId,
-          tipo:        String(r.tipo||r.TIPO||'CH').trim(),
-          nome:        nome,
-          cpf:         String(r.cpf||r.CPF||'').trim(),
-          rg:          String(r.rg||r.RG||'').trim(),
-          orgao:       String(r.orgao||r.ORGAO||'').trim(),
-          rgEmissao:   String(r.rgemissao||r.RG_EMISSAO||r.RGEMISSAO||'').trim(),
-          nascimento:  formatarDataParaPlanilha(String(r.nascimento||r.NASCIMENTO||'').trim()),
-          naturalidade:String(r.naturalidade||r.NATURALIDADE||'').trim(),
-          estado_civil:String(r.estado_civil||r.ESTADO_CIVIL||'').trim(),
-          profissao:   String(r.profissao||r.PROFISSAO||'').trim(),
-          pai:         String(r.pai||r.PAI||'').trim(),
-          mae:         String(r.mae||r.MAE||'').trim(),
-          titulo:      String(r.titulo||r.TITULO||'').trim(),
-          telefone:    String(r.telefone||r.TELEFONE||'').trim(),
-          email:       String(r.email||r.EMAIL||'').trim(),
-          endereco:    String(r.endereco||r.ENDERECO||'').trim(),
-          cidade:      String(r.cidade||r.CIDADE||'').trim(),
-          cep:         String(r.cep||r.CEP||'').trim(),
-          prop_nome:   String(r.prop_nome||r.PROP_NOME||'').trim(),
-          prop_cpf:    String(r.prop_cpf||r.PROP_CPF||'').trim(),
-          prop_rg:     String(r.prop_rg||r.PROP_RG||'').trim(),
-          prop_orgao:  String(r.prop_orgao||r.PROP_ORGAO||'').trim(),
-          endereco2:   String(r.endereco2||r.ENDERECO2||'').trim(),
-          cidade2:     String(r.cidade2||r.CIDADE2||'').trim(),
-          cep2:        String(r.cep2||r.CEP2||'').trim(),
-          gsenha:      String(r.gsenha||r.GSENHA||r.gov_senha||'').trim(),
-          ativo:       String(r.ativo||r.ATIVO||'ativo').trim()||'ativo',
-          obs:         String(r.obs||r.OBS||'').trim(),
-          pastaId:     String(r.pasta_id||r.PASTA_ID||'').trim(),
-          pastaUrl:    String(r.pasta_url||r.PASTA_URL||'').trim(),
-          criado:      formatarDataParaPlanilha(String(r.criado||r.CRIADO||hoje()).trim()),
-          atualizado:  String(r.atualizado||r.ATUALIZADO||hoje()).trim()
-        };
-
-        if(idxLocal >= 0){
-          // Atualizar apenas campos não vazios
-          Object.keys(cl).forEach(function(k){
-            if(cl[k]) _cls[idxLocal][k] = cl[k];
-          });
-          atualizados++;
+  function buscarPaginaClientes(pagina){
+    gasFetch('acao=GET_ALL&sheet=Clientes&pagina='+pagina)
+      .then(function(res){
+        if(!res.ok || !res.data){ processarClientes([]); return; }
+        var fatia = res.data.clientes || [];
+        todosRemotos = todosRemotos.concat(fatia);
+        if(res.data.temMais){
+          buscarPaginaClientes(pagina + 1);
         } else {
-          _cls.push(cl);
-          novos++;
+          processarClientes(todosRemotos);
+        }
+      })
+      .catch(function(e){
+        var msg = e && e.message ? e.message : 'falha';
+        if(msg.indexOf('Timeout')>=0){
+          toast('GAS demorou — tentando em 10s...','warn');
+          setTimeout(function(){ importarDaPlanilha(); }, 10000);
+        } else {
+          toast('Erro ao conectar: '+msg.slice(0,60),'err');
         }
       });
+  }
 
-      if(novos > 0 || atualizados > 0){
-        // Corrigir seq/clienteId duplicados antes de salvar
-        var contadores={};
-        var ordenados=_cls.slice().sort(function(a,b){
-          return (String(a.criado)||'').localeCompare(String(b.criado)||'');
-        });
-        ordenados.forEach(function(cl){
-          var t=cl.tipo||'CH';
-          if(!contadores[t]) contadores[t]=1;
-          var i2=_cls.findIndex(function(c){return c.id===cl.id;});
-          if(i2>=0){
-            _cls[i2].seq=contadores[t];
-            _cls[i2].clienteId=gerarClienteId(t,contadores[t]);
-          }
-          contadores[t]++;
-        });
-        saveClientes();
-        atualizarStats();
-        renderLista();
-        renderInicio();
-        renderAgendaHome();
-        renderCalendario(); // re-renderizar calendário com aniversários dos novos clientes
-        toast('Planilha: +'+novos+' novo(s), '+atualizados+' atualizado(s)','ok');
+  function processarClientes(remotos){
+    if(!remotos.length){ toast('Nenhum cliente na planilha','warn'); return; }
+    var novos = 0, atualizados = 0;
+    remotos.forEach(function(rem){
+      var r = {};
+      Object.keys(rem).forEach(function(k){ r[k.toLowerCase().replace(/ /g,'_')] = rem[k]; });
+      var id        = String(r.id || r.ID || '').trim();
+      var clienteId = String(r.cliente_id || r.clienteid || r.clienteId || '').trim();
+      var nome      = String(r.nome || r.NOME || '').trim();
+      if(!id || !nome) return;
+      if(_excluidos.clientes.indexOf(id)>=0) return;
+      var idxLocal = _cls.findIndex(function(c){ return c.id===id; });
+      var cl = {
+        id: id, seq: parseInt(r.seq||r.SEQ||0,10)||0, clienteId: clienteId,
+        tipo: String(r.tipo||r.TIPO||'CH').trim(), nome: nome,
+        cpf: String(r.cpf||r.CPF||'').trim(), rg: String(r.rg||r.RG||'').trim(),
+        orgao: String(r.orgao||r.ORGAO||'').trim(), rgEmissao: String(r.rgemissao||r.RG_EMISSAO||'').trim(),
+        nascimento: formatarDataParaPlanilha(String(r.nascimento||r.NASCIMENTO||'').trim()),
+        naturalidade: String(r.naturalidade||r.NATURALIDADE||'').trim(),
+        estado_civil: String(r.estado_civil||r.ESTADO_CIVIL||'').trim(),
+        profissao: String(r.profissao||r.PROFISSAO||'').trim(),
+        pai: String(r.pai||r.PAI||'').trim(), mae: String(r.mae||r.MAE||'').trim(),
+        titulo: String(r.titulo||r.TITULO||'').trim(),
+        telefone: String(r.telefone||r.TELEFONE||'').trim(),
+        email: String(r.email||r.EMAIL||'').trim(),
+        endereco: String(r.endereco||r.ENDERECO||'').trim(),
+        cidade: String(r.cidade||r.CIDADE||'').trim(), cep: String(r.cep||r.CEP||'').trim(),
+        prop_nome: String(r.prop_nome||r.PROP_NOME||'').trim(),
+        prop_cpf: String(r.prop_cpf||r.PROP_CPF||'').trim(),
+        prop_rg: String(r.prop_rg||r.PROP_RG||'').trim(),
+        prop_orgao: String(r.prop_orgao||r.PROP_ORGAO||'').trim(),
+        endereco2: String(r.endereco2||r.ENDERECO2||'').trim(),
+        cidade2: String(r.cidade2||r.CIDADE2||'').trim(), cep2: String(r.cep2||r.CEP2||'').trim(),
+        gsenha: String(r.gsenha||r.GSENHA||r.gov_senha||'').trim(),
+        ativo: String(r.ativo||r.ATIVO||'ativo').trim()||'ativo',
+        obs: String(r.obs||r.OBS||'').trim(),
+        pastaId: String(r.pasta_id||r.PASTA_ID||'').trim(),
+        pastaUrl: String(r.pasta_url||r.PASTA_URL||'').trim(),
+        criado: formatarDataParaPlanilha(String(r.criado||r.CRIADO||hoje()).trim()),
+        atualizado: String(r.atualizado||r.ATUALIZADO||hoje()).trim()
+      };
+      if(idxLocal >= 0){
+        Object.keys(cl).forEach(function(k){ if(cl[k]) _cls[idxLocal][k] = cl[k]; });
+        atualizados++;
       } else {
-        toast('Todos os clientes ja estao sincronizados','ok');
+        _cls.push(cl); novos++;
       }
-    })
-    .catch(function(e){
-      var msg = e && e.message ? e.message : 'falha desconhecida';
-      if(msg.indexOf('Timeout')>=0){
-        toast('GAS demorou pra responder — tentando novamente em 10s...','warn');
-        setTimeout(function(){
-          importarDaPlanilha();
-        }, 10000);
-      } else {
-        toast('Erro ao conectar: '+msg.slice(0,60),'err');
-      }
-      console.log('Erro importar:', e);
     });
+    if(novos > 0 || atualizados > 0){
+      recalcularIds(); saveClientes(); atualizarStats();
+      renderLista(); renderInicio(); renderAgendaHome(); renderCalendario();
+      toast('Planilha: +'+novos+' novo(s), '+atualizados+' atualizado(s)','ok');
+    } else {
+      toast('Todos os clientes ja estao sincronizados','ok');
+    }
+  }
+
+  buscarPaginaClientes(0);
 
   // Buscar servicos
   gasFetch('acao=GET_ALL&sheet=Servicos')
@@ -4899,40 +4884,33 @@ function importarDaPlanilha(){
         Object.keys(rem).forEach(function(k){ r[k.toLowerCase().replace(/ /g,'_')] = rem[k]; });
         var id = String(r.id||'').trim();
         if(!id) return;
-        if(_excluidos.servicos.indexOf(id)>=0) return; // ignorar — foi excluido permanentemente
+        if(_excluidos.servicos.indexOf(id)>=0) return;
         if(_servs.some(function(s){ return s.id===id; })) return;
         _servs.push({
-          id:           id,
-          protocolo:    String(r.protocolo||'').trim(),
-          cliId:        String(r.cli_id||r.cliid||'').trim(),
-          cliNome:      String(r.cli_nome||r.clinome||'').trim(),
-          cliCodigo:    String(r.cli_codigo||r.clicódigo||'').trim(),
-          tipoCliente:  String(r.tipo_cliente||r.tipocliente||'').trim(),
-          tipo:         String(r.tipo_servico||r.tiposervico||r.tipo||'').trim(),
-          nomeServico:  String(r.nome_servico||r.nomeservico||'').trim(),
-          detalhe:      String(r.detalhe||'').trim(),
-          inicio:       String(r.inicio||'').trim(),
-          prazo:        String(r.prazo||'').trim(),
-          status:       String(r.status||'aguardando_cli').trim(),
-          obs:          String(r.obs||'').trim(),
-          dataProtocolo:String(r.data_protocolo||r.dataprotocolo||'').trim(),
-          ultimoVisto:  String(r.ultimo_visto||r.ultimovisto||'').trim(),
-          gruComunicada:String(r.gru_comunicada||r.grucomunicada||'').trim(),
-          gruPaga:      String(r.grupaga||r.gru_paga||'').trim(),
-          criado:       String(r.criado||'').trim(),
-          atualizado:   String(r.atualizado||'').trim()
+          id: id, protocolo: String(r.protocolo||'').trim(),
+          cliId: String(r.cli_id||r.cliid||'').trim(),
+          cliNome: String(r.cli_nome||r.clinome||'').trim(),
+          cliCodigo: String(r.cli_codigo||'').trim(),
+          tipoCliente: String(r.tipo_cliente||r.tipocliente||'').trim(),
+          tipo: String(r.tipo_servico||r.tiposervico||r.tipo||'').trim(),
+          nomeServico: String(r.nome_servico||r.nomeservico||'').trim(),
+          detalhe: String(r.detalhe||'').trim(),
+          inicio: String(r.inicio||'').trim(), prazo: String(r.prazo||'').trim(),
+          status: String(r.status||'aguardando_cli').trim(),
+          obs: String(r.obs||'').trim(),
+          dataProtocolo: String(r.data_protocolo||r.dataprotocolo||'').trim(),
+          ultimoVisto: String(r.ultimo_visto||r.ultimovisto||'').trim(),
+          gruComunicada: String(r.gru_comunicada||r.grucomunicada||'').trim(),
+          gruPaga: String(r.grupaga||r.gru_paga||'').trim(),
+          criado: String(r.criado||'').trim(), atualizado: String(r.atualizado||'').trim()
         });
         novos++;
       });
-      if(novos>0){
-        saveServicos();
-        renderServicos();
-        renderAlertas();
-        toast('Servicos importados: +'+novos,'ok');
-      }
+      if(novos>0){ saveServicos(); renderServicos(); renderAlertas(); toast('Servicos importados: +'+novos,'ok'); }
     })
     .catch(function(){});
 }
+
 
 
 
