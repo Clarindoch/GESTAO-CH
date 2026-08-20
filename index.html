@@ -1366,7 +1366,8 @@ function loadAll(){
   }
 
   // Mesma coisa para serviços
-_gasUrl = localStorage.getItem('gch_gas')||_gasUrlPadrao;
+_gasUrl = _gasUrlPadrao; // URL fixa sempre tem prioridade
+localStorage.setItem('gch_gas', _gasUrlPadrao); // atualizar localStorage também
   try{
     var a = JSON.parse(localStorage.getItem('gch_acesso')||'null');
     if(a && a.u && a.s) _users = [{u:a.u, s:a.s}];
