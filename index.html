@@ -4826,7 +4826,16 @@ function importarDaPlanilha(){
 
   function processarClientes(remotos){
     if(!remotos.length){ toast('Nenhum cliente na planilha','warn'); return; }
+
+    // Reconstruir lista local a partir da planilha (fonte da verdade)
+    // Preservar apenas clientes que estao na lista de excluidos
     var novos = 0, atualizados = 0;
+    var idsRemoto = remotos.map(function(r){ return String(r.id||r.ID||'').trim(); });
+
+    // Remover locais que nao estao mais na planilha (exceto os excluidos)
+    _cls = _cls.filter(function(c){
+      return idsRemoto.indexOf(c.id) >= 0 || _excluidos.clientes.indexOf(c.id) >= 0;
+    });
     remotos.forEach(function(rem){
       try{
       var r = {};
@@ -5846,23 +5855,19 @@ atualizarStats();
 carregarAnotacao();
 renderCalendario();
 
-// Estrategia de sincronizacao inteligente:
-// Se nao tem dados locais (celular novo, cache limpo), importar IMEDIATAMENTE
-// Se ja tem dados, importar em background apos 2s
-var semDadosLocais = (_cls.length === 0 && _servs.length === 0);
-if(semDadosLocais && _gasUrl){
-  toast('Conectando com a planilha...', 'warn');
+// Sempre importar da planilha ao abrir — fonte da verdade é a planilha
+if(_gasUrl){
+  var temDadosLocais = (_cls.length > 0);
+  if(!temDadosLocais){
+    // Sem dados locais — importar imediatamente com aviso
+    toast('Conectando com a planilha...', 'warn');
+  }
   setTimeout(function(){
-    // Primeiro acorda o GAS (cold start), depois importa
     acordarGAS(function(){
       importarDaPlanilha();
       carregarConfigDaPlanilha();
     });
-  }, 500);
-} else {
-  // Ja tem dados locais — sincronizar em background
-  setTimeout(importarDaPlanilha, 3000);
-  setTimeout(carregarConfigDaPlanilha, 2000);
+  }, temDadosLocais ? 1500 : 500);
 }
 setTimeout(backupDiario,3000);
 setTimeout(enviarFilaSync,2000);
