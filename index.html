@@ -1311,7 +1311,7 @@ var _filtro = '';
 var _editId = null;
 var _delId  = null;
 
-var _gasUrlPadrao = 'https://script.google.com/macros/s/AKfycbxNrcw_PgXmsHGFH9QME6xGDlpIgh-z7jyozg7EHE34TJgaseBpa1POWUYG3HgTytUO/exec';
+var _gasUrlPadrao = 'https://script.google.com/macros/s/AKfycbzPxO9oUR18wofNx2BFsx-1MtZ2NtmEar3hc5d4YZiMzTdHcC8-c_nthkoXqyqSid3E/exec';
 var _gasUrl = _gasUrlPadrao;
 var _logado = true;
 var _users  = [{u:'clarindo',s:'helly1218'}];
@@ -1367,9 +1367,8 @@ function loadAll(){
   }
 
   // Mesma coisa para serviços
-// URL sempre fixa — nao depende de localStorage
-_gasUrl = _gasUrlPadrao;
-localStorage.setItem('gch_gas', _gasUrlPadrao);
+_gasUrl = 'https://script.google.com/macros/s/AKfycbzPxO9oUR18wofNx2BFsx-1MtZ2NtmEar3hc5d4YZiMzTdHcC8-c_nthkoXqyqSid3E/exec';
+localStorage.setItem('gch_gas', _gasUrl);
   try{
     var a = JSON.parse(localStorage.getItem('gch_acesso')||'null');
     if(a && a.u && a.s) _users = [{u:a.u, s:a.s}];
