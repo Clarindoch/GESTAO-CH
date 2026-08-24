@@ -4801,9 +4801,9 @@ function syncCompleto(){
 
 
 // =========== IMPORTAR DA PLANILHA AO INICIAR ===========
-function importarDaPlanilha(){
+function importarDaPlanilha(silencioso){
   if(!_gasUrl){ toast('Configure a URL do GAS primeiro em Config','err'); return; }
-  toast('Importando da planilha...','warn');
+  if(!silencioso) toast('Importando da planilha...','warn');
 
   var todosRemotos = [];
 
@@ -4886,7 +4886,7 @@ function importarDaPlanilha(){
     if(novos > 0 || atualizados > 0){
       recalcularIds(); saveClientes(); atualizarStats();
       renderLista(); renderInicio(); renderAgendaHome(); renderCalendario();
-      toast('Planilha: +'+novos+' novo(s), '+atualizados+' atualizado(s)','ok');
+      toast('✓ '+_cls.length+' clientes carregados','ok');
     } else {
       toast('Todos os clientes ja estao sincronizados','ok');
     }
@@ -5855,19 +5855,12 @@ atualizarStats();
 carregarAnotacao();
 renderCalendario();
 
-// Sempre importar da planilha ao abrir — fonte da verdade é a planilha
+// Importar da planilha sempre ao abrir
 if(_gasUrl){
-  var temDadosLocais = (_cls.length > 0);
-  if(!temDadosLocais){
-    // Sem dados locais — importar imediatamente com aviso
-    toast('Conectando com a planilha...', 'warn');
-  }
   setTimeout(function(){
-    acordarGAS(function(){
-      importarDaPlanilha();
-      carregarConfigDaPlanilha();
-    });
-  }, temDadosLocais ? 1500 : 500);
+    importarDaPlanilha(true); // silencioso — sem toast
+    carregarConfigDaPlanilha();
+  }, _cls.length === 0 ? 800 : 2000);
 }
 setTimeout(backupDiario,3000);
 setTimeout(enviarFilaSync,2000);
