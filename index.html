@@ -206,6 +206,12 @@ select.inp option{background:#fff}
 
 <!-- INICIO -->
 <div class="pg on" id="pg-inicio">
+  <!-- Indicador de sincronização -->
+  <div id="sync-status-bar" style="display:none;background:#e3f2fd;border:1px solid #90caf9;border-radius:var(--r2);padding:8px 14px;margin-bottom:10px;font-size:12px;color:#1565c0;display:flex;align-items:center;gap:8px">
+    <span id="sync-status-icon">⟳</span>
+    <span id="sync-status-txt">Sincronizando com a planilha...</span>
+  </div>
+
   <!-- Stats -->
   <div class="stats" style="grid-template-columns:repeat(4,1fr)">
     <div class="stat"><div class="stat-n" id="s-total">0</div><div class="stat-l">Total</div></div>
@@ -1328,6 +1334,8 @@ var _delId  = null;
 
 var _gasUrlPadrao = 'https://script.google.com/macros/s/AKfycbzPxO9oUR18wofNx2BFsx-1MtZ2NtmEar3hc5d4YZiMzTdHcC8-c_nthkoXqyqSid3E/exec';
 var _gasUrl = _gasUrlPadrao;
+// Forçar URL correta imediatamente — apagar qualquer cache antigo
+try{ localStorage.setItem('gch_gas', _gasUrlPadrao); }catch(e){}
 var _logado = true;
 var _users  = [{u:'clarindo',s:'helly1218'}];
 
@@ -3061,6 +3069,21 @@ function toggleAtivoCliente(cliId){
   toast(novoStatus==='inativo' ? 'Cliente marcado como INATIVO' : 'Cliente marcado como ATIVO', 'ok');
   atualizarStats();
   renderAgendaHome();
+}
+
+function mostrarSyncStatus(msg, ok){
+  var bar = document.getElementById('sync-status-bar');
+  var ico = document.getElementById('sync-status-icon');
+  var txt = document.getElementById('sync-status-txt');
+  if(!bar) return;
+  if(msg === null){ bar.style.display='none'; return; }
+  bar.style.display='flex';
+  bar.style.background = ok ? '#e8f5e9' : '#e3f2fd';
+  bar.style.borderColor = ok ? '#a5d6a7' : '#90caf9';
+  bar.style.color = ok ? '#2e7d32' : '#1565c0';
+  if(ico) ico.textContent = ok ? '✓' : '⟳';
+  if(txt) txt.textContent = msg;
+  if(ok) setTimeout(function(){ mostrarSyncStatus(null); }, 4000);
 }
 
 function calcularAlertas(){
@@ -4860,7 +4883,8 @@ function syncCompleto(){
 
 // =========== IMPORTAR DA PLANILHA AO INICIAR ===========
 function importarDaPlanilha(silencioso){
-  if(!_gasUrl){ toast('Configure a URL do GAS primeiro em Config','err'); return; }
+  if(!_gasUrl){ return; }
+  mostrarSyncStatus('Sincronizando com a planilha...');
   if(!silencioso) toast('Importando da planilha...','warn');
 
   var todosRemotos = [];
@@ -4884,7 +4908,7 @@ function importarDaPlanilha(silencioso){
 
   function processarClientes(remotos){
     if(!remotos.length){
-      toast('Planilha retornou vazio — verifique o GAS','warn');
+      mostrarSyncStatus('Planilha retornou vazio — verifique o GAS', false);
       return;
     }
 
@@ -4947,7 +4971,7 @@ function importarDaPlanilha(silencioso){
     if(novos > 0 || atualizados > 0){
       recalcularIds(); saveClientes(); atualizarStats();
       renderLista(); renderInicio(); renderAgendaHome(); renderCalendario();
-      toast('✓ '+_cls.length+' clientes carregados','ok');
+      mostrarSyncStatus('✓ ' + _cls.length + ' clientes · ' + _servs.length + ' serviços', true);
     } else {
       toast('Todos os clientes ja estao sincronizados','ok');
     }
@@ -5920,14 +5944,21 @@ atualizarStats();
 carregarAnotacao();
 renderCalendario();
 
-// Importar da planilha sempre ao abrir
-if(_gasUrl){
-  setTimeout(function(){
-    importarDaPlanilha(true); // silencioso — sem toast
-    carregarConfigDaPlanilha();
-  }, _cls.length === 0 ? 800 : 2000);
-}
+// SYNC AUTOMÁTICO ao abrir — sempre, sem condição
+setTimeout(function(){
+  if(!_gasUrl) return;
+  importarDaPlanilha(true);
+  carregarConfigDaPlanilha();
+}, 1000);
+
+// Re-sync a cada 5 minutos em background
+setInterval(function(){
+  if(_gasUrl) importarDaPlanilha(true);
+}, 5 * 60 * 1000);
 setTimeout(backupDiario,3000);
+
+// Backup automático a cada 30 minutos
+setInterval(function(){ backupDiario(); }, 30 * 60 * 1000);
 setTimeout(enviarFilaSync,2000);
 setTimeout(verificarSexta,1500);
 setTimeout(renderAlertas,100);
