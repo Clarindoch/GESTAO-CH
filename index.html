@@ -2483,7 +2483,7 @@ function copiarGAS(){
 function testarConexao(){
   if(!_gasUrl){ toast('Cole a URL do GAS primeiro','err'); return; }
   toast('Testando conexao...','warn');
-  gasFetch('acao=GET_TODOS&sheet=Clientes')
+  gasFetch('acao=GET_ALL&sheet=Clientes')
     .then(function(d){
       if(d.ok) toast('&#10003; Conexao OK! GAS respondendo normalmente.','ok');
       else toast('Conectou mas com erro: '+(d.error||'desconhecido'),'err');
@@ -2501,7 +2501,7 @@ function sincronizarTudo(){
   toast('Sincronizando com a planilha...','warn');
 
   // Buscar TUDO da planilha e substituir local completamente
-  gasFetch('acao=GET_TODOS&sheet=Clientes')
+  gasFetch('acao=GET_ALL&sheet=Clientes')
     .then(function(res){
       var remotos = (res.ok && res.data) ? (res.data.clientes||res.data||[]) : [];
       if(!remotos.length){ toast('Planilha retornou vazio','warn'); return; }
@@ -4808,7 +4808,7 @@ function importarDaPlanilha(silencioso){
   var todosRemotos = [];
 
   function buscarPaginaClientes(){
-    gasFetch('acao=GET_TODOS&sheet=Clientes')
+    gasFetch('acao=GET_ALL&sheet=Clientes')
       .then(function(res){
         if(!res.ok || !res.data){ processarClientes([]); return; }
         processarClientes(res.data.clientes || []);
@@ -4825,7 +4825,10 @@ function importarDaPlanilha(silencioso){
   }
 
   function processarClientes(remotos){
-    if(!remotos.length){ toast('Nenhum cliente na planilha','warn'); return; }
+    if(!remotos.length){
+      toast('Planilha retornou vazio — verifique o GAS','warn');
+      return;
+    }
 
     // Reconstruir lista local a partir da planilha (fonte da verdade)
     // Preservar apenas clientes que estao na lista de excluidos
@@ -4895,7 +4898,7 @@ function importarDaPlanilha(silencioso){
   buscarPaginaClientes();
 
   // Buscar servicos
-  gasFetch('acao=GET_TODOS&sheet=Servicos')
+  gasFetch('acao=GET_ALL&sheet=Servicos')
     .then(function(res){
       if(!res.ok || !res.data) return;
       var remotos = res.data.clientes || res.data || [];
@@ -5403,7 +5406,7 @@ function forceSyncTotal(){
   toast('Dados locais limpos. Importando da planilha...','warn');
 
   // Reimportar do zero
-  gasFetch('acao=GET_TODOS&sheet=Clientes')
+  gasFetch('acao=GET_ALL&sheet=Clientes')
     .then(function(res){
       if(!res.ok || !res.data){ toast('Erro ao buscar planilha','err'); return; }
       var remotos = res.data.clientes || [];
@@ -5455,7 +5458,7 @@ function forceSyncTotal(){
 
   // Reimportar serviços também
   setTimeout(function(){
-    gasFetch('acao=GET_TODOS&sheet=Servicos')
+    gasFetch('acao=GET_ALL&sheet=Servicos')
       .then(function(res){
         if(!res.ok||!res.data) return;
         var remotos = res.data.clientes||[];
@@ -5492,7 +5495,7 @@ function forceSyncTotal(){
 
 function diagnosticarSistema(){
   toast('Testando GAS...','warn');
-  gasFetch('acao=GET_TODOS&sheet=Clientes')
+  gasFetch('acao=GET_ALL&sheet=Clientes')
     .then(function(res){
       var clientes = res.ok && res.data ? (res.data.clientes||[]) : [];
       var total = clientes.length;
