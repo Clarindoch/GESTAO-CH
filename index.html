@@ -803,20 +803,35 @@ function gerarDoc(params) {
     }
 
     if (!pasta) {
-      // Sem pasta vinculada: criar na raiz CTR ou CH
-      if (pastaRaiz) {
-        var raiz;
-        try {
-          raiz = DriveApp.getFolderById(pastaRaiz);
-        } catch (eRaizInvalida) {
-          return jsonErr('Pasta raiz invalida. Verifique o link da pasta raiz em Config.');
-        }
-        // Buscar pasta existente pelo nome antes de criar
+      // Sem pasta vinculada: usar pasta CTR ou CH conforme tipo do cliente
+      // IDs fixos das pastas raiz
+      var PASTA_CTR = '1X0flh5p4gnv5rf8qdIbb58yPMi2XwtRs';
+      var PASTA_CH  = '1Xw4iZt7tcxxrv-SkIOlepq0BFBlwzKYo';
+      var PASTA_RAIZ = '1czFvG5eWKJLCiBw18XqnnmwE1YoBz69M';
+
+      // Determinar pasta raiz pelo tipo do cliente (via pastaRaiz ou tipo)
+      var tipoCliente = String(params.tipocliente || params.TIPOCLIENTE || '').toUpperCase();
+      var idRaizUsar = pastaRaiz || '';
+
+      if(!idRaizUsar){
+        if(tipoCliente === 'CTR') idRaizUsar = PASTA_CTR;
+        else if(tipoCliente === 'CH') idRaizUsar = PASTA_CH;
+        else idRaizUsar = PASTA_RAIZ;
+      }
+
+      try {
+        var raiz = DriveApp.getFolderById(idRaizUsar);
         var pastas = raiz.getFoldersByName(nomePasta);
         pasta = pastas.hasNext() ? pastas.next() : raiz.createFolder(nomePasta);
-      } else {
-        var todas = DriveApp.getFoldersByName(nomePasta);
-        pasta = todas.hasNext() ? todas.next() : DriveApp.createFolder(nomePasta);
+      } catch(eRaiz) {
+        // Fallback para pasta raiz geral
+        try {
+          var raizGeral = DriveApp.getFolderById(PASTA_RAIZ);
+          var pastasGeral = raizGeral.getFoldersByName(nomePasta);
+          pasta = pastasGeral.hasNext() ? pastasGeral.next() : raizGeral.createFolder(nomePasta);
+        } catch(e2) {
+          return jsonErr('Nao foi possivel acessar nenhuma pasta raiz: '+e2.toString());
+        }
       }
     }
 
@@ -1425,6 +1440,14 @@ function limparForm(){
   set('f-tipo','CH');
   set('f-ativo','ativo');
   set('f-codigo-custom','');
+
+  // Limpar campos adicionais que possam ter ficado
+  ['f-pnome','f-pcpf','f-prg','f-porgao','f-end2','f-cidade2','f-cep2'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value='';
+  });
+  // Resetar título e botão
+  set('cad-tit','+ Novo Cliente');
+  var bs=document.getElementById('btn-salvar'); if(bs) bs.textContent='💾 Salvar Cliente';
   set('cad-tit','+ Novo Cliente');
   var bs = document.getElementById('btn-salvar'); if(bs) bs.textContent = 'Salvar Cliente';
 }
@@ -1487,12 +1510,47 @@ function proximoProtocolo(tipo, tipoServ){
 }
 
 // =========== SALVAR ===========
+var _salvando = false; // flag para evitar duplo clique
+
 function salvar(){
+  if(_salvando){ toast('Aguarde...','warn'); return; }
+  _salvando = true;
+  setTimeout(function(){ _salvando = false; }, 3000); // libera após 3s
+
   var nome = g('f-nome');
-  if(!nome){ toast('Nome e obrigatorio!','err'); document.getElementById('f-nome').focus(); return; }
+  if(!nome){ _salvando=false; toast('Nome e obrigatorio!','err'); document.getElementById('f-nome').focus(); return; }
   var isNovo = !_editId;
   var id     = _editId || uid();
   var cEx    = _cls.find(function(c){ return c.id===id; }) || {};
+
+  // Verificar CPF duplicado em novo cadastro
+  var cpfDigitado = g('f-cpf').replace(/\D/g,'');
+  if(isNovo && cpfDigitado && cpfDigitado.length >= 11){
+    var cpfDup = _cls.find(function(c){
+      return c.cpf && c.cpf.replace(/\D/g,'') === cpfDigitado;
+    });
+    if(cpfDup){
+      _salvando = false;
+      if(!confirm('ATENCAO: CPF ja cadastrado para:\n'+cpfDup.nome+' ('+cpfDup.clienteId+')\n\nDeseja continuar mesmo assim?')){
+        return;
+      }
+    }
+  }
+
+  // Verificar nome muito similar (possivel duplicata)
+  if(isNovo && nome.length > 5){
+    var nomeLower = nome.toLowerCase().trim();
+    var nomeDup = _cls.find(function(c){
+      return c.nome && c.nome.toLowerCase().trim() === nomeLower;
+    });
+    if(nomeDup){
+      _salvando = false;
+      if(!confirm('ATENCAO: Nome identico ja cadastrado:\n'+nomeDup.nome+' ('+nomeDup.clienteId+')\n\nDeseja continuar mesmo assim?')){
+        return;
+      }
+      _salvando = true;
+    }
+  }
 
   // PROTECAO: se vai atualizar um cliente existente, confirmar com o usuario
   // para evitar sobrescrever dados por engano (bug critico corrigido)
@@ -1554,6 +1612,7 @@ function salvar(){
     toast('Atualizado: '+d.nome.split(' ')[0],'ok');
     registrarAuditoria('EDICAO', d.clienteId+' - '+d.nome);
   }
+  _salvando = false;
   limparForm();
   ir('lista');
   if(isNovo){
@@ -5019,7 +5078,9 @@ function autoPreencherDocsConfig(){
     'doc-cinco-anos':    '1i8YETFm_4B0jpPh7rfHsOytIUiOKCn0GtFr_AGv6aFw',
     'doc-residencia':    '169aNkBxNE2YKsz1XbBuLImSrdCIAAlm8Rruzpq3h2a0',
     'doc-inexistencia':  '1-YR3-KqJRkBucGw6GmjmAVTdQPTjebx9QCoUhS8R45c',
-    // Pastas raiz FIXAS — CTR e CH
+    // Pastas raiz FIXAS — Raiz, CTR e CH
+    'doc-pasta-raiz':        'https://drive.google.com/drive/folders/1czFvG5eWKJLCiBw18XqnnmwE1YoBz69M',
+    'doc-pasta-raiz-id':     '1czFvG5eWKJLCiBw18XqnnmwE1YoBz69M',
     'doc-pasta-raiz-ctr':    'https://drive.google.com/drive/folders/1X0flh5p4gnv5rf8qdIbb58yPMi2XwtRs',
     'doc-pasta-raiz-ctr-id': '1X0flh5p4gnv5rf8qdIbb58yPMi2XwtRs',
     'doc-pasta-raiz-ch':     'https://drive.google.com/drive/folders/1Xw4iZt7tcxxrv-SkIOlepq0BFBlwzKYo',
@@ -5032,6 +5093,8 @@ function autoPreencherDocsConfig(){
 
   // Mesclar: manter docs de usuario, mas SEMPRE fixar as pastas raiz
   var cfgFinal = Object.assign({}, cfgExistente, {
+    'doc-pasta-raiz':        idsDefault['doc-pasta-raiz'],
+    'doc-pasta-raiz-id':     idsDefault['doc-pasta-raiz-id'],
     'doc-pasta-raiz-ctr':    idsDefault['doc-pasta-raiz-ctr'],
     'doc-pasta-raiz-ctr-id': idsDefault['doc-pasta-raiz-ctr-id'],
     'doc-pasta-raiz-ch':     idsDefault['doc-pasta-raiz-ch'],
