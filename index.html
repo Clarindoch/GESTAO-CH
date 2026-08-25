@@ -5193,52 +5193,41 @@ function gasFetchPost(qs){
 
 var _gasCbCount = 0;
 function gasFetch(qs){
-  // Tenta fetch() nativo primeiro (mais confiavel no mobile)
-  // GAS responde com headers CORS via doGet redirect
-  var url = _gasUrl + '?' + qs;
-  var timeoutMs = 25000;
+  // Sempre usar JSONP — mais compativel com GAS em todos os dispositivos
+  return new Promise(function(resolve, reject){
+    // Garantir URL correta sempre
+    var urlBase = _gasUrlPadrao || _gasUrl;
+    if(!urlBase){ reject(new Error('URL do GAS nao configurada')); return; }
 
-  var timeoutPromise = new Promise(function(_, reject){
-    setTimeout(function(){ reject(new Error('Timeout - GAS nao respondeu')); }, timeoutMs);
+    var cbName = '_gasCb' + (_gasCbCount++);
+    var timeoutId = setTimeout(function(){
+      cleanup();
+      reject(new Error('Timeout'));
+    }, 30000);
+
+    function cleanup(){
+      clearTimeout(timeoutId);
+      try{ delete window[cbName]; }catch(e){}
+      if(script && script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    window[cbName] = function(data){
+      cleanup();
+      resolve(data);
+    };
+
+    var script = document.createElement('script');
+    script.src = urlBase + '?' + qs + '&callback=' + cbName + '&_t=' + Date.now();
+    script.onerror = function(){
+      cleanup();
+      // Tentar fetch como fallback
+      fetch(urlBase + '?' + qs, {method:'GET', redirect:'follow'})
+        .then(function(r){ return r.json(); })
+        .then(function(d){ resolve(d); })
+        .catch(function(){ reject(new Error('Falha de conexao com GAS')); });
+    };
+    document.head.appendChild(script);
   });
-
-  var fetchPromise = fetch(url, {
-    method: 'GET',
-    mode: 'cors',
-    redirect: 'follow'
-  }).then(function(resp){
-    return resp.json();
-  }).then(function(data){
-    return data;
-  });
-
-  return Promise.race([fetchPromise, timeoutPromise])
-    .catch(function(errFetch){
-      // Se fetch falhar (CORS bloqueado), tentar JSONP como fallback
-      return new Promise(function(resolve, reject){
-        var cbName = '_gasCb' + (_gasCbCount++);
-        var timeoutId = setTimeout(function(){
-          cleanup();
-          reject(new Error('Timeout - GAS nao respondeu (rede lenta)'));
-        }, timeoutMs);
-
-        function cleanup(){
-          clearTimeout(timeoutId);
-          delete window[cbName];
-          if(script && script.parentNode) script.parentNode.removeChild(script);
-        }
-
-        window[cbName] = function(data){ cleanup(); resolve(data); };
-
-        var script = document.createElement('script');
-        script.src = _gasUrl + '?' + qs + '&callback=' + cbName;
-        script.onerror = function(){
-          cleanup();
-          reject(new Error('Falha ao conectar com GAS. Verifique se o GAS esta publicado como App da Web com acesso "Qualquer pessoa".'));
-        };
-        document.body.appendChild(script);
-      });
-    });
 }
 
 
@@ -5945,11 +5934,15 @@ carregarAnotacao();
 renderCalendario();
 
 // SYNC AUTOMÁTICO ao abrir — sempre, sem condição
+// Delay de 2s para garantir que o navegador terminou de carregar
 setTimeout(function(){
-  if(!_gasUrl) return;
+  var url = _gasUrlPadrao || _gasUrl;
+  if(!url) return;
+  _gasUrl = url; // garantir que _gasUrl está definido
+  mostrarSyncStatus('Conectando com a planilha...');
   importarDaPlanilha(true);
   carregarConfigDaPlanilha();
-}, 1000);
+}, 2000);
 
 // Re-sync a cada 5 minutos em background
 setInterval(function(){
