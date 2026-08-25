@@ -1622,19 +1622,18 @@ function salvar(){
     registrarAuditoria('EDICAO', d.clienteId+' - '+d.nome);
   }
   _salvando = false;
+  var idSalvo = d.id; // guardar id antes de limpar
+  var isNovoSalvo = isNovo;
   limparForm();
 
-  if(isNovo){
-    toast('✅ Cadastrado com sucesso: '+d.clienteId+' — '+d.nome.split(' ')[0],'ok');
-    _recentementeCADastrado = d.id; // marcar para mostrar banner na ficha
-    ir('lista');
-    setTimeout(function(){ verCliente(d.id); }, 300);
+  // Ir para a ficha do cliente salvo
+  if(isNovoSalvo){
+    toast('✅ Cadastrado: '+d.clienteId+' — '+d.nome.split(' ')[0],'ok');
+    _recentementeCADastrado = idSalvo;
   } else {
     toast('✅ Atualizado: '+d.nome.split(' ')[0],'ok');
-    _recentementeCADastrado = null;
-    ir('lista');
-    setTimeout(function(){ verCliente(d.id); }, 300);
   }
+  verCliente(idSalvo);
 }
 
 // =========== EDITAR / EXCLUIR ===========
