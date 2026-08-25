@@ -1519,6 +1519,7 @@ function proximoProtocolo(tipo, tipoServ){
 
 // =========== SALVAR ===========
 var _salvando = false; // flag para evitar duplo clique
+var _recentementeCADastrado = null;
 
 function salvar(){
   if(_salvando){ toast('Aguarde...','warn'); return; }
@@ -1622,9 +1623,17 @@ function salvar(){
   }
   _salvando = false;
   limparForm();
-  ir('lista');
+
   if(isNovo){
-    setTimeout(function(){ verCliente(d.id); }, 600);
+    toast('✅ Cadastrado com sucesso: '+d.clienteId+' — '+d.nome.split(' ')[0],'ok');
+    _recentementeCADastrado = d.id; // marcar para mostrar banner na ficha
+    ir('lista');
+    setTimeout(function(){ verCliente(d.id); }, 300);
+  } else {
+    toast('✅ Atualizado: '+d.nome.split(' ')[0],'ok');
+    _recentementeCADastrado = null;
+    ir('lista');
+    setTimeout(function(){ verCliente(d.id); }, 300);
   }
 }
 
@@ -2148,6 +2157,22 @@ function rowCli(cl){
 function verCliente(id){
   var cl=_cls.find(function(c){return c.id===id;}); if(!cl) return;
   _editId=id; ir('detalhe');
+
+  // Banner verde se recém cadastrado
+  if(_recentementeCADastrado === id){
+    _recentementeCADastrado = null;
+    setTimeout(function(){
+      var banner = document.createElement('div');
+      banner.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);'
+        +'background:#1e7a48;color:#fff;padding:14px 28px;border-radius:12px;'
+        +'font-size:15px;font-weight:800;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.3);'
+        +'text-align:center;min-width:280px';
+      banner.innerHTML = '&#9989; CLIENTE CADASTRADO!<br>'
+        +'<span style="font-size:12px;font-weight:400;opacity:.9">Dados salvos na planilha</span>';
+      document.body.appendChild(banner);
+      setTimeout(function(){ banner.remove(); }, 4000);
+    }, 300);
+  }
   var ctr=cl.tipo==='CTR';
   var cor=ctr?'var(--green)':'var(--blue)';
   var inativoCl = (cl.ativo||'ativo') === 'inativo';
@@ -2710,10 +2735,11 @@ document.addEventListener('click',function(e){ if(e.target.classList.contains('m
 
 // =========== TOAST ===========
 var _tt;
-function toast(msg,tipo){
+function toast(msg,tipo,dur){
   var el=document.getElementById('toast'); if(!el) return;
   el.textContent=msg; el.className='on '+(tipo||'');
-  clearTimeout(_tt); _tt=setTimeout(function(){ el.className=''; },2800);
+  var ms = dur || (tipo==='ok' ? 5000 : 3000);
+  clearTimeout(_tt); _tt=setTimeout(function(){ el.className=''; }, ms);
 }
 
 // =========== RELOGIO ===========
