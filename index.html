@@ -1390,8 +1390,8 @@ function loadAll(){
   }
 
   // Mesma coisa para serviços
-_gasUrl = 'https://script.google.com/macros/s/AKfycbzPxO9oUR18wofNx2BFsx-1MtZ2NtmEar3hc5d4YZiMzTdHcC8-c_nthkoXqyqSid3E/exec';
-localStorage.setItem('gch_gas', _gasUrl);
+  // URL fixa — definida no topo do script
+  // localStorage.setItem('gch_gas', _gasUrl); — ja feito no topo
   try{
     var a = JSON.parse(localStorage.getItem('gch_acesso')||'null');
     if(a && a.u && a.s) _users = [{u:a.u, s:a.s}];
@@ -5933,16 +5933,24 @@ atualizarStats();
 carregarAnotacao();
 renderCalendario();
 
-// SYNC AUTOMÁTICO ao abrir — sempre, sem condição
-// Delay de 2s para garantir que o navegador terminou de carregar
-setTimeout(function(){
-  var url = _gasUrlPadrao || _gasUrl;
-  if(!url) return;
-  _gasUrl = url; // garantir que _gasUrl está definido
+// ── SYNC AUTOMÁTICO ─────────────────────────────────────────────────
+// URL sempre fixa — nunca depende de configuração manual
+_gasUrl = 'https://script.google.com/macros/s/AKfycbzPxO9oUR18wofNx2BFsx-1MtZ2NtmEar3hc5d4YZiMzTdHcC8-c_nthkoXqyqSid3E/exec';
+_gasUrlPadrao = 'https://script.google.com/macros/s/AKfycbzPxO9oUR18wofNx2BFsx-1MtZ2NtmEar3hc5d4YZiMzTdHcC8-c_nthkoXqyqSid3E/exec';
+
+// Sync imediato ao carregar (sem setTimeout para não falhar)
+window.addEventListener('load', function(){
+  _gasUrl = 'https://script.google.com/macros/s/AKfycbzPxO9oUR18wofNx2BFsx-1MtZ2NtmEar3hc5d4YZiMzTdHcC8-c_nthkoXqyqSid3E/exec';
   mostrarSyncStatus('Conectando com a planilha...');
-  importarDaPlanilha(true);
-  carregarConfigDaPlanilha();
-}, 2000);
+  setTimeout(function(){
+    importarDaPlanilha(true);
+    carregarConfigDaPlanilha();
+  }, 1500);
+});
+
+// Re-sync a cada 5 minutos
+setInterval(function(){ importarDaPlanilha(true); }, 5*60*1000);
+
 
 // Re-sync a cada 5 minutos em background
 setInterval(function(){
