@@ -814,10 +814,24 @@ function filtrarCat(c){
 }
 
 // EMITIR DECLARAÇÃO
+// IDs dos templates Google Docs (fixos no código)
+var DOCS_IDS={
+  'dsa':   '1e4FaQKdbhgsGbXHTguCcrrUDHtkynD-fEu3m5oMY70k',
+  'dga':   '1xaam1qBLXbiobK0fa6zPGXmY268ngcgPDp0FwcIlooY',
+  '5anos': '1xBh1tkPMTb-wSkuIC7O337NGhUeRxLU6I-xfV9DK_qM',
+  'res':   '1G0mdl2-dJooipjj5k4chP8r3lyoHsaThfAUSBtlz9Bo',
+  'inex':  '1_UU0mqRlyLK8wS_U8rZzLLa19bnHA1b96IhtZcLV8Oo',
+  'transf':'',
+  'proc':  '',
+  'req-cr':'',
+  'req-ren':''
+};
+
 function emitir(tipo){
   var cl=_cls.find(function(c){return c.id===_pid;});if(!cl){toast('Selecione uma pessoa','err');return;}
   var cfg={};try{cfg=JSON.parse(localStorage.getItem(CFG_KEY)||'{}');}catch(e){}
-  var docId=(cfg.docs&&cfg.docs[tipo])||'';
+  // Usar ID da config ou o ID fixo embutido no código
+  var docId=(cfg.docs&&cfg.docs[tipo])||DOCS_IDS[tipo]||'';
   if(!docId){toast('Configure o ID do template em Configurações → IDs dos Documentos','warn');return;}
   toast('Gerando documento...','warn');
   var praiz=cl.tipo==='CTR'?(cfg.pastaCtr||''):(cfg.pastaCh||'');
@@ -1101,28 +1115,34 @@ document.addEventListener('click',function(e){
 
 // ═══ CHECKLIST DE DOCUMENTOS ═══
 var DOCS_CHECKLIST = [
-  {id:'rg', label:'RG (Cópia frente e verso)'},
-  {id:'cpf', label:'CPF (Cópia)'},
-  {id:'comprova-res', label:'Comprovante de Residência (menos de 3 meses)'},
-  {id:'cert-neg', label:'Certidão Negativa de Antecedentes Criminais'},
-  {id:'cert-neg-fed', label:'Certidão Negativa Federal'},
-  {id:'foto-3x4', label:'Foto 3x4 recente'},
-  {id:'laudo-apto', label:'Laudo de Aptidão Psicológica'},
-  {id:'laudo-med', label:'Laudo de Capacidade Técnica'},
-  {id:'titulo-eleitor', label:'Título de Eleitor'},
-  {id:'certidao-casamento', label:'Certidão de Casamento (se casado)'},
-  {id:'contrato-imovel', label:'Contrato/Escritura do Imóvel'},
-  {id:'proc-dono-imovel', label:'Procuração do Dono do Imóvel (se terceiro)'},
-  {id:'doc-arma', label:'Documento da Arma / Nota Fiscal'},
-  {id:'gru-paga', label:'GRU Paga (comprovante)'},
-  {id:'requerimento', label:'Requerimento assinado'},
-  {id:'dsa', label:'DSA — Declaração de Segurança do Acervo'},
-  {id:'dga', label:'DGA — Declaração de Guarda do Acervo'},
+  {id:'rg',         label:'RG completo (frente e verso) — já contém CPF'},
+  {id:'foto-3x4',   label:'Foto 3x4 recente'},
+  {id:'nota-fiscal',label:'Nota Fiscal da Arma (se houver)'},
+  {id:'cert-est',   label:'Certidão Negativa Estadual'},
+  {id:'cert-fed',   label:'Certidão Negativa Federal'},
+  {id:'cert-mil',   label:'Certidão Negativa Militar'},
+  {id:'cert-eleit', label:'Certidão Negativa Eleitoral'},
+  {id:'comprova-res',label:'Comprovante de Residência (até 3 meses)'},
+  {id:'laudo-psico',label:'Laudo de Aptidão Psicológica'},
+  {id:'laudo-tec',  label:'Laudo de Capacidade Técnica'},
+  {id:'cert-casam', label:'Certidão de Casamento (se casado/a)'},
+  {id:'escritura',  label:'Escritura/Contrato do Imóvel'},
+  {id:'proc-imovel',label:'Procuração do Dono do Imóvel (se em nome de terceiro)'},
+  {id:'gru',        label:'GRU — Guia de Recolhimento da União (paga)'},
+  {id:'req-assina', label:'Requerimento assinado'},
+  {id:'dsa',        label:'DSA — Declaração de Segurança do Acervo'},
+  {id:'dga',        label:'DGA — Declaração de Guarda do Acervo'},
+  {id:'decl-5anos', label:'Declaração de 5 Anos'},
+  {id:'decl-inex',  label:'Declaração de Inexistência de Impedimento'},
+  {id:'titulo',     label:'Título de Eleitor'},
 ];
 
 function renderChecklist(){
   var div=document.getElementById('checklist-corpo'); if(!div||!_pid) return;
-  var chave='_chk_'+_pid;
+  // Checklist é por processo — pegar o processo ativo ou criar chave por cliente
+  var procAtivo=_servs.filter(function(s){return s.cliId===_pid;})[0];
+  var procId=procAtivo?procAtivo.id:_pid;
+  var chave='_chk_proc_'+procId;
   var marcados={};try{marcados=JSON.parse(localStorage.getItem(chave)||'{}');}catch(e){}
   var total=DOCS_CHECKLIST.length;
   var ok=Object.keys(marcados).filter(function(k){return marcados[k];}).length;
@@ -1152,7 +1172,9 @@ function renderChecklist(){
 }
 function toggleCheck(id){
   if(!_pid)return;
-  var chave='_chk_'+_pid;
+  var procAtivo2=_servs.filter(function(s){return s.cliId===_pid;})[0];
+  var procId2=procAtivo2?procAtivo2.id:_pid;
+  var chave='_chk_proc_'+procId2;
   var m={};try{m=JSON.parse(localStorage.getItem(chave)||'{}');}catch(e){}
   m[id]=!m[id];
   localStorage.setItem(chave,JSON.stringify(m));
