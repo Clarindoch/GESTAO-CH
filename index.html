@@ -293,6 +293,11 @@ body{font-family:'Roboto','Segoe UI',sans-serif;background:var(--bg);color:var(-
   .resumo-row{gap:6px}
   .r-card{min-width:80px}
 }
+
+.btn-sm-cat{padding:5px 12px;border-radius:99px;font-size:12px;cursor:pointer;border:1px solid var(--border)}
+.active-cat{background:var(--primary)!important;color:#fff!important;border-color:var(--primary)!important}
+.decl-item[style*="display:none"]{display:none!important}
+
 </style>
 </head>
 <body>
@@ -507,59 +512,122 @@ body{font-family:'Roboto','Segoe UI',sans-serif;background:var(--bg);color:var(-
 
   <!-- Aba: Declarações -->
   <div class="tab-pane" id="tab-declaracoes">
-    <div class="box">
-      <div class="box-hdr"><span class="box-title">Emitir Declaração</span></div>
-      <div class="box-sub">Selecione o tipo de declaração para gerar o documento.</div>
+
+    <!-- Filtro por categoria -->
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      <button class="btn-primary btn-sm-cat active-cat" id="cat-todas" onclick="filtrarCat('todas')">Todas</button>
+      <button class="btn-secondary btn-sm-cat" id="cat-seguranca" onclick="filtrarCat('seguranca')">🛡 Segurança</button>
+      <button class="btn-secondary btn-sm-cat" id="cat-transferencia" onclick="filtrarCat('transferencia')">🔄 Transferência</button>
+      <button class="btn-secondary btn-sm-cat" id="cat-residencia" onclick="filtrarCat('residencia')">🏠 Residência</button>
+      <button class="btn-secondary btn-sm-cat" id="cat-outros" onclick="filtrarCat('outros')">📄 Outros</button>
+    </div>
+
+    <div class="box" id="box-decl">
+      <div class="box-hdr">
+        <span class="box-title">Declarações e Requerimentos</span>
+        <span style="font-size:11px;color:var(--dim)">Clique em Emitir para gerar via Google Docs</span>
+      </div>
       <div id="lista-declaracoes">
-        <div class="decl-item" onclick="emitirDeclaracao('seg-acervo')">
-          <div class="decl-icon"><svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg></div>
-          <div>
+
+        <!-- SEGURANÇA DO ACERVO -->
+        <div class="decl-item" data-cat="seguranca">
+          <div class="decl-icon" style="background:#e8f5e9"><svg viewBox="0 0 24 24" fill="#2e7d32"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg></div>
+          <div style="flex:1">
             <div class="decl-nome">Declaração de Segurança do Acervo</div>
-            <div class="decl-desc">DSA — Gerada em Google Docs</div>
+            <div class="decl-desc">DSA · Art. 37 do Dec. 9.847/2019 · Obrigatória para renovação do CR</div>
           </div>
-          <div class="decl-acoes">
-            <button class="btn-primary" onclick="event.stopPropagation();emitirDeclaracao('seg-acervo')">Emitir</button>
-          </div>
+          <button class="btn-primary" onclick="emitirDeclaracao('seg-acervo')">Emitir</button>
         </div>
-        <div class="decl-item" onclick="emitirDeclaracao('guarda-acervo')">
-          <div class="decl-icon"><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg></div>
-          <div>
+
+        <!-- GUARDA DO ACERVO -->
+        <div class="decl-item" data-cat="seguranca">
+          <div class="decl-icon" style="background:#e3f2fd"><svg viewBox="0 0 24 24" fill="#1976d2"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg></div>
+          <div style="flex:1">
             <div class="decl-nome">Declaração de Guarda do Acervo</div>
-            <div class="decl-desc">DGA — Gerada em Google Docs</div>
+            <div class="decl-desc">DGA · Responsabilidade sobre a guarda segura do armamento</div>
           </div>
-          <div class="decl-acoes">
-            <button class="btn-primary" onclick="event.stopPropagation();emitirDeclaracao('guarda-acervo')">Emitir</button>
-          </div>
+          <button class="btn-primary" onclick="emitirDeclaracao('guarda-acervo')">Emitir</button>
         </div>
-        <div class="decl-item" onclick="emitirDeclaracao('cinco-anos')">
-          <div class="decl-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div>
-          <div>
+
+        <!-- 5 ANOS -->
+        <div class="decl-item" data-cat="seguranca">
+          <div class="decl-icon" style="background:#f3e5f5"><svg viewBox="0 0 24 24" fill="#7b1fa2"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></div>
+          <div style="flex:1">
             <div class="decl-nome">Declaração de 5 Anos</div>
-            <div class="decl-desc">Renovação — Gerada em Google Docs</div>
+            <div class="decl-desc">Renovação quinquenal · Art. 5°, §4° do Estatuto do Desarmamento</div>
           </div>
-          <div class="decl-acoes">
-            <button class="btn-primary" onclick="event.stopPropagation();emitirDeclaracao('cinco-anos')">Emitir</button>
-          </div>
+          <button class="btn-primary" onclick="emitirDeclaracao('cinco-anos')">Emitir</button>
         </div>
-        <div class="decl-item" onclick="emitirDeclaracao('residencia')">
-          <div class="decl-icon"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>
-          <div>
+
+        <!-- TRANSFERÊNCIA DE PROPRIEDADE -->
+        <div class="decl-item" data-cat="transferencia">
+          <div class="decl-icon" style="background:#fff3e0"><svg viewBox="0 0 24 24" fill="#e65100"><path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg></div>
+          <div style="flex:1">
+            <div class="decl-nome">Declaração de Transferência de Propriedade</div>
+            <div class="decl-desc">Para transferência de arma entre pessoas físicas</div>
+          </div>
+          <button class="btn-primary" onclick="emitirDeclaracao('transferencia')">Emitir</button>
+        </div>
+
+        <!-- PROCURAÇÃO -->
+        <div class="decl-item" data-cat="transferencia">
+          <div class="decl-icon" style="background:#fce4ec"><svg viewBox="0 0 24 24" fill="#c62828"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11zm-5-3H7v-2h6v2zm2-4H7v-2h8v2z"/></svg></div>
+          <div style="flex:1">
+            <div class="decl-nome">Procuração para Representação</div>
+            <div class="decl-desc">Autoriza o despachante a representar o titular perante o Exército</div>
+          </div>
+          <button class="btn-primary" onclick="emitirDeclaracao('procuracao')">Emitir</button>
+        </div>
+
+        <!-- RESIDÊNCIA -->
+        <div class="decl-item" data-cat="residencia">
+          <div class="decl-icon" style="background:#e8f5e9"><svg viewBox="0 0 24 24" fill="#2e7d32"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div>
+          <div style="flex:1">
             <div class="decl-nome">Declaração de Residência</div>
-            <div class="decl-desc">Comprovante — Gerada em Google Docs</div>
+            <div class="decl-desc">Comprovante de endereço declarado — para uso em processos</div>
           </div>
-          <div class="decl-acoes">
-            <button class="btn-primary" onclick="event.stopPropagation();emitirDeclaracao('residencia')">Emitir</button>
-          </div>
+          <button class="btn-primary" onclick="emitirDeclaracao('residencia')">Emitir</button>
         </div>
-        <div class="decl-item" onclick="emitirDeclaracao('inexistencia')">
-          <div class="decl-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg></div>
-          <div>
-            <div class="decl-nome">Declaração de Inexistência</div>
-            <div class="decl-desc">Certidão — Gerada em Google Docs</div>
+
+        <!-- INEXISTÊNCIA -->
+        <div class="decl-item" data-cat="outros">
+          <div class="decl-icon" style="background:#f5f5f5"><svg viewBox="0 0 24 24" fill="#616161"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg></div>
+          <div style="flex:1">
+            <div class="decl-nome">Declaração de Inexistência de Impedimento</div>
+            <div class="decl-desc">Certidão negativa de antecedentes / inexistência de restrição</div>
           </div>
-          <div class="decl-acoes">
-            <button class="btn-primary" onclick="event.stopPropagation();emitirDeclaracao('inexistencia')">Emitir</button>
+          <button class="btn-primary" onclick="emitirDeclaracao('inexistencia')">Emitir</button>
+        </div>
+
+        <!-- REQUERIMENTO CR -->
+        <div class="decl-item" data-cat="outros">
+          <div class="decl-icon" style="background:#e3f2fd"><svg viewBox="0 0 24 24" fill="#1976d2"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm-1 14H5c-.55 0-1-.45-1-1V9l8 5 8-5v8c0 .55-.45 1-1 1zm-7-7L4 7h16l-8 5z"/></svg></div>
+          <div style="flex:1">
+            <div class="decl-nome">Requerimento de CR — Certificado de Registro</div>
+            <div class="decl-desc">Solicitação de registro inicial de arma de fogo</div>
           </div>
+          <button class="btn-primary" onclick="emitirDeclaracao('req-cr')">Emitir</button>
+        </div>
+
+        <!-- REQUERIMENTO RENOVAÇÃO CR -->
+        <div class="decl-item" data-cat="outros">
+          <div class="decl-icon" style="background:#fff8e1"><svg viewBox="0 0 24 24" fill="#f57f17"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg></div>
+          <div style="flex:1">
+            <div class="decl-nome">Requerimento de Renovação do CR</div>
+            <div class="decl-desc">RCRAF · Renovação do Certificado de Registro de Arma de Fogo</div>
+          </div>
+          <button class="btn-primary" onclick="emitirDeclaracao('req-renovacao')">Emitir</button>
+        </div>
+
+      </div><!-- /lista-declaracoes -->
+    </div>
+
+    <!-- Histórico de documentos emitidos -->
+    <div class="box" style="margin-top:16px">
+      <div class="box-hdr"><span class="box-title">Histórico de Emissões</span></div>
+      <div id="hist-decl">
+        <div class="box-empty" style="padding:20px">
+          <p style="color:var(--dim);font-size:13px">Nenhum documento emitido ainda para esta pessoa.</p>
         </div>
       </div>
     </div>
@@ -831,6 +899,17 @@ function irPg(pg){
 // ══ HELPER DATA ══
 function abrirPorData(el){abrirPerfil(el.dataset.id,el.dataset.aba||"info");}
 
+// ══ FILTRO DECLARAÇÕES ══
+function filtrarCat(cat){
+  document.querySelectorAll('.btn-sm-cat').forEach(function(b){b.classList.remove('active-cat');b.classList.add('btn-secondary');b.classList.remove('btn-primary');});
+  var btn=document.getElementById('cat-'+cat);
+  if(btn){btn.classList.add('active-cat','btn-primary');btn.classList.remove('btn-secondary');}
+  document.querySelectorAll('#lista-declaracoes .decl-item').forEach(function(el){
+    if(cat==='todas'||el.dataset.cat===cat) el.style.display='';
+    else el.style.display='none';
+  });
+}
+
 // ══ SIDEBAR ══
 function toggleSidebar(){
   document.getElementById('sidebar').classList.toggle('open');
@@ -1004,20 +1083,29 @@ function renderTarefas(){
     var mb=Math.max.apply(null,porCli[b].map(function(s){return diasDesde(s.ultimoVisto||s.inicio);}));
     return mb-ma;
   });
-  div.innerHTML=ids.slice(0,10).map(function(cliId){
+  var rows=ids.slice(0,15).map(function(cliId){
     var cl=_cls.find(function(c){return c.id===cliId;})||{nome:'ID:'+cliId,tipo:'CTR',clienteId:''};
     var svs=porCli[cliId];
     var maxD=Math.max.apply(null,svs.map(function(s){return diasDesde(s.ultimoVisto||s.inicio);}));
     var cc=maxD>=14?'tc-red':maxD>=7?'tc-orange':'tc-green';
     var ct=maxD>=14?maxD+'d !':maxD>=7?maxD+'d':'OK';
-    var bgAv=cl.tipo==='CTR'?'var(--green)':'var(--primary)';
-    return '<div class="tarefa-item" onclick="abrirPerfil(\'' + cl.id + '\',\'processos\')">'+
-      +'<div class="t-av" style="background:'+bgAv+'">'+iniciais(cl.nome)+'</div>'
+    var bg=cl.tipo==='CTR'?'#2e7d32':'#1a5fa8';
+    var row=document.createElement('div');
+    row.className='tarefa-item';
+    row.dataset.id=cl.id; row.dataset.aba='processos';
+    row.onclick=function(){abrirPorfData(this);};
+    row.innerHTML=
+      '<div class="t-av" style="background:'+bg+'">'+iniciais(cl.nome)+'</div>'
       +'<div><div class="t-nome">'+nomeCurto(cl.nome)+'</div>'
       +'<div class="t-sub">'+svs.length+' processo(s) · '+(cl.clienteId||cl.tipo)+'</div></div>'
-      +'<span class="t-chip '+cc+'">'+ct+'</span>'
-      +'</div>';
-  }).join('');
+      +'<span class="t-chip '+cc+'">'+ct+'</span>';
+    return row.outerHTML;
+  });
+  div.innerHTML=rows.join('');
+  // Re-bind click via delegation
+  div.querySelectorAll('.tarefa-item').forEach(function(el){
+    el.onclick=function(){abrirPerfil(el.dataset.id, el.dataset.aba||'processos');};
+  });
 }
 
 // ══ PESSOAS ══
@@ -1159,6 +1247,7 @@ function emitirDeclaracao(tipo){
       _docs.unshift(d);
       localStorage.setItem('_docs',JSON.stringify(_docs));
       toast('✓ Documento gerado!','ok');
+      renderHistDecl();
       if(res.data&&res.data.docUrl) window.open(res.data.docUrl,'_blank');
     }else{toast('Erro: '+(res.error||'falha'),'err');}
   }).catch(function(e){toast('Erro: '+e.message,'err');});
@@ -1304,6 +1393,31 @@ function salvarProcesso(){
   fecharModal('modal-proc');
   renderProcPerfil();
   toast('✓ Processo criado: '+sv.protocolo,'ok');
+}
+
+// ══ HISTÓRICO DECLARAÇÕES ══
+function renderHistDecl(){
+  var div=document.getElementById('hist-decl'); if(!div) return;
+  var docs=_docs.filter(function(d){return d.cliId===_perfilId;});
+  if(!docs.length){
+    div.innerHTML='<div class="box-empty" style="padding:16px"><p style="color:var(--dim);font-size:13px">Nenhum documento emitido ainda.</p></div>';
+    return;
+  }
+  var tipos={
+    'seg-acervo':'DSA','guarda-acervo':'DGA','cinco-anos':'5 Anos',
+    'transferencia':'Transferência','procuracao':'Procuração',
+    'residencia':'Residência','inexistencia':'Inexistência',
+    'req-cr':'Req. CR','req-renovacao':'Req. Renovação'
+  };
+  div.innerHTML=docs.map(function(d){
+    return '<div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border)">'
+      +'<div style="font-size:20px">📄</div>'
+      +'<div style="flex:1"><div style="font-size:13px;font-weight:500">'+(tipos[d.tipo]||d.tipo)+' — '+d.nomeDoc+'</div>'
+      +'<div style="font-size:11px;color:var(--dim)">Emitido em '+d.gerado+'</div></div>'
+      +(d.docUrl?'<a href="'+d.docUrl+'" target="_blank" class="btn-secondary" style="font-size:11px;padding:4px 10px;text-decoration:none">Docs</a>':'')
+      +(d.pdfUrl?'<a href="'+d.pdfUrl+'" target="_blank" class="btn-secondary" style="font-size:11px;padding:4px 10px;text-decoration:none">PDF</a>':'')
+      +'</div>';
+  }).join('');
 }
 
 // ══ EDITAR PESSOA ══
