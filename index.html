@@ -3,607 +3,970 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CH Gestão Premium</title>
+<title>CH Gestão Premium — Despachante</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&display=swap">
 <style>
+/* === RESET E BASE === */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --pr:#1a5fa8;--pr-dk:#1350a0;--pr-lt:#e8f0fa;
-  --bg:#f5f5f5;--wh:#fff;--bd:#e0e0e0;
-  --tx:#212121;--dm:#757575;--mt:#9e9e9e;
-  --gn:#2e7d32;--gn-bg:#e8f5e9;
-  --rd:#c62828;--rd-bg:#ffebee;
-  --or:#e65100;--or-bg:#fff3e0;
-  --sb:240px;--hh:56px;
+  --pr:#1a5276;--pr-dk:#154360;--pr-lt:#d6eaf8;
+  --sidebar-bg:#253b4a;--sidebar-w:220px;
+  --hdr-h:64px;--hdr-bg:#253b4a;
+  --bg:#f4f6f7;--wh:#fff;--bd:#dde2e8;
+  --tx:#2c3e50;--dm:#6c7a89;--mt:#95a5a6;
+  --gn:#1e8449;--gn-bg:#d5f5e3;
+  --rd:#cb4335;--rd-bg:#fdedec;
+  --or:#ca6f1e;--or-bg:#fef9e7;
+  --am:#b7950b;--am-bg:#fdf2b3;
+  --az:#1f618d;--az-bg:#d6eaf8;
 }
-body{font-family:'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--tx);min-height:100vh}
+body{font-family:'Open Sans',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;font-size:14px}
+a{text-decoration:none;color:inherit}
 
-/* HEADER */
-#hdr{position:fixed;top:0;left:0;right:0;height:var(--hh);background:var(--pr);
-  display:flex;align-items:center;padding:0 8px;gap:6px;
-  box-shadow:0 2px 6px rgba(0,0,0,.25);z-index:300}
-.hbtn{width:40px;height:40px;border-radius:50%;background:none;border:none;
-  color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.hbtn:hover{background:rgba(255,255,255,.15)}
-.hbtn svg{fill:white;width:22px;height:22px}
-#hdr-brand{font-size:15px;font-weight:700;color:#fff;flex:1;display:flex;align-items:center;gap:8px}
-#hdr-brand .lg{background:#fff;color:var(--pr);padding:2px 8px;border-radius:4px;font-size:13px;font-weight:900}
-#hdr-cnt{font-size:11px;padding:2px 10px;border-radius:99px;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3)}
-#hdr-sync{font-size:11px;padding:2px 10px;border-radius:99px;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);cursor:pointer}
-#hdr-sync:hover{background:rgba(255,255,255,.25)}
-.hdr-nb{position:relative}
-.nb-dot{position:absolute;top:8px;right:8px;width:8px;height:8px;background:#f44336;border-radius:50%;display:none}
-#hdr-av{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.4);color:#fff;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+/* === LAYOUT === */
+#app{display:flex;min-height:100vh}
+#sidebar{
+  width:var(--sidebar-w);background:var(--sidebar-bg);
+  display:flex;flex-direction:column;
+  position:fixed;top:0;left:0;bottom:0;z-index:100;
+  transition:.3s;overflow:hidden;
+}
+#main-wrap{margin-left:var(--sidebar-w);display:flex;flex-direction:column;flex:1;min-height:100vh}
+#topbar{
+  height:var(--hdr-h);background:var(--wh);
+  border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;padding:0 20px;gap:12px;
+  position:sticky;top:0;z-index:90;box-shadow:0 1px 4px rgba(0,0,0,.08);
+}
+#content{padding:24px;flex:1}
 
-/* SIDEBAR */
-#sb{position:fixed;left:0;top:var(--hh);bottom:0;width:var(--sb);background:var(--wh);border-right:1px solid var(--bd);overflow-y:auto;z-index:200;transition:.25s}
-#sb::-webkit-scrollbar{width:4px}
-#sb::-webkit-scrollbar-thumb{background:var(--bd)}
-.ni{display:flex;align-items:center;gap:14px;padding:11px 16px;width:100%;border:none;background:none;color:var(--dm);font-size:14px;cursor:pointer;transition:.15s;border-left:3px solid transparent;text-align:left}
-.ni svg{width:22px;height:22px;fill:currentColor;flex-shrink:0}
-.ni:hover{background:rgba(26,95,168,.08);color:var(--pr)}
-.ni.on{background:rgba(26,95,168,.12);color:var(--pr);border-left-color:var(--pr);font-weight:500}
-.n-badge{margin-left:auto;font-size:10px;padding:1px 7px;border-radius:99px;font-weight:700;background:var(--pr-lt);color:var(--pr)}
-.n-badge.rd{background:var(--rd-bg);color:var(--rd)}
-.ndiv{height:1px;background:var(--bd);margin:6px 0}
+/* === SIDEBAR === */
+.sb-logo{
+  padding:16px;display:flex;align-items:center;gap:10px;
+  border-bottom:1px solid rgba(255,255,255,.1);min-height:64px;
+}
+.sb-logo-badge{
+  background:#e8a838;color:#fff;font-weight:900;font-size:13px;
+  padding:4px 8px;border-radius:4px;letter-spacing:.05em;
+}
+.sb-logo-txt{color:#fff;font-size:14px;font-weight:600;line-height:1.3}
+.sb-logo-sub{color:rgba(255,255,255,.5);font-size:11px}
+.sb-nav{flex:1;overflow-y:auto;padding:8px 0}
+.sb-nav::-webkit-scrollbar{width:3px}
+.sb-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15)}
+.sb-item{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 16px;color:rgba(255,255,255,.7);
+  font-size:13px;cursor:pointer;transition:.2s;
+  border-left:3px solid transparent;
+}
+.sb-item svg{width:20px;height:20px;fill:currentColor;flex-shrink:0}
+.sb-item:hover{background:rgba(255,255,255,.08);color:#fff}
+.sb-item.on{background:rgba(255,255,255,.12);color:#fff;border-left-color:#e8a838}
+.sb-badge{margin-left:auto;background:rgba(255,255,255,.15);color:#fff;font-size:10px;padding:1px 7px;border-radius:99px;font-weight:700}
+.sb-badge.rd{background:#e74c3c}
+.sb-div{height:1px;background:rgba(255,255,255,.08);margin:6px 0}
+.sb-section-label{color:rgba(255,255,255,.35);font-size:10px;text-transform:uppercase;letter-spacing:.1em;padding:10px 16px 4px;font-weight:700}
+.sb-footer{padding:12px 16px;border-top:1px solid rgba(255,255,255,.08)}
+.sb-footer-txt{color:rgba(255,255,255,.4);font-size:11px}
 
-/* MAIN */
-#main{margin-left:var(--sb);margin-top:var(--hh);padding:20px 24px 48px;min-height:calc(100vh - var(--hh))}
-.pg{display:none}.pg.on{display:block}
+/* === TOPBAR === */
+#tb-toggle{background:none;border:none;cursor:pointer;padding:6px;border-radius:4px;display:flex;align-items:center;justify-content:center}
+#tb-toggle:hover{background:#f0f0f0}
+#tb-toggle svg{fill:#6c7a89;width:22px;height:22px}
+#tb-breadcrumb{flex:1;font-size:14px;color:var(--dm);display:flex;align-items:center;gap:8px}
+#tb-breadcrumb strong{color:var(--tx)}
+#tb-sync-btn{
+  font-size:12px;padding:5px 12px;border-radius:4px;
+  background:var(--pr-lt);color:var(--pr);border:1px solid #a9cce3;
+  cursor:pointer;display:flex;align-items:center;gap:5px;font-weight:600;
+}
+#tb-sync-btn:hover{background:#a9cce3}
+#tb-alert-btn{position:relative;background:none;border:none;cursor:pointer;padding:6px;border-radius:50%;display:flex;align-items:center}
+#tb-alert-btn:hover{background:#f0f0f0}
+#tb-alert-btn svg{fill:var(--dm);width:22px;height:22px}
+.tb-notif-dot{position:absolute;top:5px;right:5px;width:9px;height:9px;background:#e74c3c;border-radius:50%;display:none;border:2px solid #fff}
+#tb-user{display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 8px;border-radius:4px}
+#tb-user:hover{background:#f0f0f0}
+#tb-av{width:34px;height:34px;border-radius:50%;background:#253b4a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
 
-/* BOX */
-.box{background:var(--wh);border:1px solid var(--bd);border-radius:4px;margin-bottom:16px}
-.bx-h{display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--bd)}
-.bx-t{font-size:15px;font-weight:400;flex:1}
-.bx-s{font-size:12px;color:var(--dm);padding:4px 16px 8px}
-.bx-b{padding:16px}
-.bx-e{display:flex;flex-direction:column;align-items:center;padding:32px;gap:10px;color:var(--dm);font-size:14px;text-align:center}
-.bx-e svg{fill:var(--gn);width:40px;height:40px}
-
-/* RESUMO */
-.r-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
-.rc{flex:1;min-width:80px;background:var(--wh);border:1px solid var(--bd);border-radius:4px;padding:14px;cursor:pointer;transition:.15s;text-align:center}
-.rc:hover{background:var(--pr-lt);border-color:var(--pr)}
-.rc-l{font-size:11px;color:var(--dm);margin-bottom:6px;text-transform:uppercase;letter-spacing:.03em}
-.rc-n{font-size:28px;font-weight:700;line-height:1}
-
-/* SYNC BANNER */
-#sync-bar{display:none;align-items:center;gap:10px;padding:10px 14px;background:var(--pr-lt);border:1px solid #90caf9;border-radius:4px;margin-bottom:14px;font-size:13px;color:var(--pr)}
-#sync-bar svg{fill:var(--pr);width:18px;height:18px;flex-shrink:0;animation:spin 1.5s linear infinite}
+/* === SYNC BANNER === */
+#sync-banner{
+  display:none;align-items:center;gap:10px;
+  background:#eaf2ff;border:1px solid #85c1e9;border-radius:6px;
+  padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--az);
+}
+#sync-banner svg{fill:var(--az);width:18px;height:18px;animation:spin 1.5s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* BUSCA */
-.sb-row{display:flex;gap:8px;margin-bottom:14px}
-.s-inp{flex:1;padding:9px 12px;border:1px solid var(--bd);border-radius:4px;font-size:14px;outline:none;transition:.15s}
-.s-inp:focus{border-color:var(--pr)}
-.btn-p{background:var(--pr);color:#fff;border:none;padding:9px 16px;border-radius:4px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:.15s}
-.btn-p:hover{background:var(--pr-dk)}
-.btn-s{background:var(--wh);color:var(--pr);border:1px solid var(--pr);padding:7px 14px;border-radius:4px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s}
-.btn-s:hover{background:var(--pr-lt)}
+/* === CARDS RESUMO === */
+.cards-resumo{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+.card-res{
+  flex:1;min-width:90px;background:var(--wh);
+  border:1px solid var(--bd);border-radius:8px;
+  padding:16px;cursor:pointer;transition:.2s;
+  text-align:center;
+}
+.card-res:hover{border-color:var(--pr);box-shadow:0 2px 8px rgba(26,82,118,.15)}
+.card-res-label{font-size:11px;color:var(--dm);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+.card-res-num{font-size:32px;font-weight:700;color:var(--tx);line-height:1}
 
-/* LISTA PESSOAS */
-.pi{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--bd);cursor:pointer;transition:.15s}
-.pi:hover{background:#fafafa}
-.pi:last-child{border-bottom:none}
-.p-av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0}
-.p-nm{font-size:14px;font-weight:500}
-.p-mt{font-size:12px;color:var(--dm);margin-top:2px}
-.p-cp{margin-left:auto;font-size:11px;padding:2px 9px;border-radius:99px;font-weight:600}
-.ctr{background:var(--gn-bg);color:var(--gn)}.ch{background:var(--pr-lt);color:var(--pr)}.in{background:#f5f5f5;color:var(--mt)}
+/* === CAIXA/BOX === */
+.box{background:var(--wh);border:1px solid var(--bd);border-radius:8px;margin-bottom:16px;overflow:hidden}
+.box-hdr{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--bd)}
+.box-title{font-size:14px;font-weight:600;flex:1;color:var(--tx)}
+.box-sub{font-size:12px;color:var(--dm);padding:6px 18px 0}
+.box-body{padding:16px 18px}
+.box-empty{display:flex;flex-direction:column;align-items:center;padding:32px;gap:12px;color:var(--dm);font-size:13px;text-align:center}
+.box-empty svg{fill:#85c1e9;width:44px;height:44px}
 
-/* PERFIL */
-.ph{background:var(--wh);border:1px solid var(--bd);border-radius:4px;padding:20px;margin-bottom:16px;display:flex;align-items:center;gap:16px}
-.pf-av{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:#fff;flex-shrink:0}
-.p-ac{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+/* === STATS PROCESSO === */
+.proc-stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--bd)}
+.proc-stat-cell{background:var(--wh);padding:14px;text-align:center}
+.proc-stat-label{font-size:10px;color:var(--dm);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;font-weight:600}
+.proc-stat-num{font-size:24px;font-weight:700}
+.proc-stats-grid2{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--bd);border-top:1px solid var(--bd)}
 
-/* ABAS */
-.tab-bar{display:flex;border-bottom:2px solid var(--bd);margin-bottom:16px;overflow-x:auto;-webkit-overflow-scrolling:touch}
-.tab-bar::-webkit-scrollbar{display:none}
-.tab-b{padding:10px 14px;border:none;background:none;font-size:13px;color:var(--dm);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;transition:.15s}
-.tab-b:hover{color:var(--pr)}.tab-b.on{color:var(--pr);border-bottom-color:var(--pr);font-weight:500}
-.tab-p{display:none}.tab-p.on{display:block}
+/* === BUSCA === */
+.search-row{display:flex;gap:8px;margin-bottom:14px}
+.search-inp{
+  flex:1;padding:9px 14px;border:1px solid var(--bd);border-radius:6px;
+  font-size:13px;outline:none;font-family:inherit;transition:.2s;background:#fff;
+}
+.search-inp:focus{border-color:#85c1e9;box-shadow:0 0 0 3px rgba(133,193,233,.2)}
+.btn-pri{
+  background:var(--pr);color:#fff;border:none;padding:9px 16px;border-radius:6px;
+  font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+  font-family:inherit;transition:.2s;
+}
+.btn-pri:hover{background:var(--pr-dk)}
+.btn-sec{
+  background:var(--wh);color:var(--pr);border:1px solid var(--pr);
+  padding:7px 14px;border-radius:6px;font-size:13px;font-weight:600;
+  cursor:pointer;font-family:inherit;transition:.2s;
+}
+.btn-sec:hover{background:var(--pr-lt)}
+.btn-warn{background:var(--or-bg);color:var(--or);border:1px solid #e59866;padding:7px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-danger{background:var(--rd-bg);color:var(--rd);border:1px solid #f1948a;padding:7px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-voz{padding:0 12px;font-size:18px;border-radius:6px;border:1px solid var(--bd);background:#fff;cursor:pointer;transition:.2s}
+.btn-voz:hover{background:var(--pr-lt);border-color:#85c1e9}
 
-/* GRID INFO */
-.ig{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.ii label{font-size:10px;font-weight:700;color:var(--dm);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px}
-.ii .v{font-size:13px;color:var(--tx);word-break:break-word}
-.sec{font-size:10px;font-weight:800;color:var(--dm);text-transform:uppercase;letter-spacing:.12em;margin:14px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--bd)}
+/* === LISTA PESSOAS (crm-pessoa do tirodigital.css) === */
+.pessoa-lista{list-style:none}
+.pessoa-card{
+  display:flex;align-items:center;gap:14px;
+  border:1px solid #dde2e8;border-left:4px solid #95a5a6;border-radius:6px;
+  padding:14px 16px;margin-bottom:10px;cursor:pointer;
+  transition:all .2s;background:#fff;
+}
+.pessoa-card:hover{background:#f8f9fa;transform:translateX(3px);box-shadow:-1px 4px 12px -4px rgba(0,0,0,.15)}
+.pessoa-card.pendente{border-left-color:#e8a838}
+.pessoa-card.inativo{opacity:.65;border-left-color:#bdc3c7}
+.p-av-lg{
+  width:44px;height:44px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:700;color:#fff;flex-shrink:0;
+}
+.p-info{flex:1;min-width:0}
+.p-info-name{font-size:15px;font-weight:700;color:#2c3e50;margin-bottom:3px}
+.p-info-meta{font-size:12px;color:#6c7a89}
+.p-chip{font-size:11px;padding:2px 10px;border-radius:99px;font-weight:700;flex-shrink:0}
+.chip-ctr{background:#d5f5e3;color:#1e8449}
+.chip-ch{background:#d6eaf8;color:#1a5276}
+.chip-in{background:#f2f3f4;color:#7f8c8d}
 
-/* FORM */
-.fg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+/* === PERFIL === */
+#pg-perfil .perfil-hdr{
+  background:var(--wh);border:1px solid var(--bd);border-radius:8px;
+  padding:20px;margin-bottom:16px;display:flex;align-items:center;gap:18px;
+}
+.perfil-av-wrap{position:relative}
+.perfil-av{
+  width:70px;height:70px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;font-weight:700;color:#fff;flex-shrink:0;
+}
+.perfil-nome{font-size:20px;font-weight:700;margin-bottom:4px}
+.perfil-meta{font-size:13px;color:var(--dm)}
+.perfil-acoes{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+
+/* === ABAS === */
+.tab-nav{
+  display:flex;border-bottom:2px solid var(--bd);margin-bottom:16px;
+  overflow-x:auto;-webkit-overflow-scrolling:touch;gap:0;
+}
+.tab-nav::-webkit-scrollbar{display:none}
+.tab-btn{
+  padding:11px 16px;border:none;background:none;font-size:13px;
+  color:var(--dm);cursor:pointer;border-bottom:2px solid transparent;
+  margin-bottom:-2px;white-space:nowrap;font-family:inherit;transition:.15s;
+  display:flex;align-items:center;gap:6px;font-weight:500;
+}
+.tab-btn:hover{color:var(--pr)}
+.tab-btn.on{color:var(--pr);border-bottom-color:#e8a838;font-weight:600}
+.tab-pane{display:none}.tab-pane.on{display:block}
+
+/* === INFO GRID === */
+.info-2col{display:grid;grid-template-columns:1fr 1fr;gap:14px 20px}
+.info-item label{font-size:10px;font-weight:700;color:var(--dm);text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:4px}
+.info-item .val{font-size:13px;color:var(--tx);word-break:break-word;line-height:1.4}
+.info-sep{grid-column:1/-1;height:1px;background:var(--bd);margin:2px 0}
+.info-sec{grid-column:1/-1;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--dm);margin:8px 0 4px;padding-bottom:5px;border-bottom:1px solid var(--bd)}
+.gov-box{background:#fef9e7;border:1px solid #f9e79f;border-radius:6px;padding:14px}
+.gov-pass{font-family:'Courier New',monospace;font-size:15px;font-weight:700;background:#fff;padding:4px 10px;border-radius:4px;border:1px solid #f9e79f;display:inline-block;letter-spacing:.1em}
+
+/* === FORMULÁRIO === */
+.form-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px}
 .fw{grid-column:1/-1}
-.ff label{display:block;font-size:10px;font-weight:700;color:var(--dm);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
-.ff input,.ff select,.ff textarea{width:100%;padding:8px 11px;border:1px solid var(--bd);border-radius:4px;font-size:13px;outline:none;background:#fff;transition:.15s}
-.ff input:focus,.ff select:focus{border-color:var(--pr)}
+.form-sec{grid-column:1/-1;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--dm);margin:8px 0 2px;padding-bottom:5px;border-bottom:1px solid var(--bd)}
+.fld label{display:block;font-size:11px;font-weight:700;color:var(--dm);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.fld input,.fld select,.fld textarea{
+  width:100%;padding:8px 12px;border:1px solid var(--bd);border-radius:6px;
+  font-size:13px;outline:none;background:#fff;font-family:inherit;transition:.2s;color:var(--tx);
+}
+.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:#85c1e9;box-shadow:0 0 0 3px rgba(133,193,233,.2)}
 
-/* PROCESSO CARD */
-.pc{border:1px solid var(--bd);border-radius:4px;padding:14px;margin-bottom:10px;border-left:4px solid var(--bd);cursor:pointer;transition:.15s}
-.pc:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
-.pc.urg{border-left-color:var(--rd)}.pc.at{border-left-color:var(--or)}.pc.ok{border-left-color:var(--gn)}
-.sp{font-size:11px;padding:3px 10px;border-radius:99px;font-weight:600}
-.s-agu{background:var(--or-bg);color:var(--or)}.s-exe{background:#e3f2fd;color:var(--pr)}
-.s-prot{background:#f3e5f5;color:#7b1fa2}.s-def{background:var(--gn-bg);color:var(--gn)}.s-ind{background:var(--rd-bg);color:var(--rd)}
+/* === PROCESSO CARD === */
+.proc-card{
+  border:1px solid var(--bd);border-radius:6px;padding:14px 16px;margin-bottom:10px;
+  border-left:4px solid var(--bd);cursor:pointer;transition:.15s;background:#fff;
+}
+.proc-card:hover{box-shadow:0 2px 10px rgba(0,0,0,.08)}
+.proc-card.urg{border-left-color:#e74c3c}
+.proc-card.at{border-left-color:#e8a838}
+.proc-card.ok-gn{border-left-color:#27ae60}
+.proc-card.inativo{border-left-color:#bdc3c7;opacity:.8}
+.proc-proto{font-size:11px;font-weight:700;color:var(--pr);margin-bottom:3px}
+.proc-nome-s{font-size:14px;font-weight:600;margin-bottom:8px}
+.proc-row{display:flex;align-items:center;justify-content:space-between}
+.status-badge{font-size:11px;padding:3px 10px;border-radius:99px;font-weight:700}
+.s-agu{background:#fef9e7;color:#ca6f1e}
+.s-exe{background:#d6eaf8;color:#1f618d}
+.s-prot{background:#e8daef;color:#7d3c98}
+.s-def{background:#d5f5e3;color:#1e8449}
+.s-ind{background:#fdedec;color:#cb4335}
+.s-ana{background:#eafaf1;color:#1e8449}
+.gru-badge{font-size:10px;padding:2px 7px;border-radius:99px;font-weight:700;background:#d5f5e3;color:#1e8449}
 
-/* DECLARAÇÕES */
-.di{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--bd);transition:.15s}
-.di:hover{background:#fafafa}.di:last-child{border-bottom:none}
-.di-ic{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.di-ic svg{width:20px;height:20px}
-.di-nm{font-size:14px;font-weight:500}.di-ds{font-size:12px;color:var(--dm);margin-top:2px}
+/* === DECLARAÇÕES === */
+.decl-row{
+  display:flex;align-items:center;gap:14px;
+  padding:13px 18px;border-bottom:1px solid var(--bd);transition:.15s;
+}
+.decl-row:hover{background:#f8f9fa}
+.decl-row:last-child{border-bottom:none}
+.decl-ico{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.decl-ico svg{width:20px;height:20px}
+.decl-nome{font-size:13px;font-weight:600}
+.decl-desc{font-size:11px;color:var(--dm);margin-top:2px}
+.decl-id{font-size:10px;color:var(--mt);margin-top:1px;font-family:monospace}
 
-/* CHECKLIST */
-.ck-bar{height:8px;background:#f0f0f0;border-radius:4px;margin-bottom:14px}
+/* === CHECKLIST === */
+.ck-progress{height:8px;background:#ecf0f1;border-radius:4px;margin-bottom:14px;overflow:hidden}
 .ck-fill{height:100%;border-radius:4px;transition:.3s}
-.ck-item{display:flex;align-items:center;gap:12px;padding:9px 4px;border-bottom:1px solid #f5f5f5;cursor:pointer;transition:.1s}
-.ck-item:hover{background:#fafafa}.ck-item:last-child{border-bottom:none}
-.ck-ic{width:22px;height:22px;border-radius:50%;border:2px solid var(--bd);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.2s}
-.ck-ic.ok{border-color:var(--gn);background:var(--gn)}
-.ck-lb{font-size:13px}.ck-lb.ok{color:var(--gn);text-decoration:line-through}
+.ck-row{
+  display:flex;align-items:center;gap:12px;padding:9px 4px;
+  border-bottom:1px solid #f0f3f4;cursor:pointer;transition:.1s;
+}
+.ck-row:hover{background:#f8f9fa}
+.ck-row:last-child{border-bottom:none}
+.ck-circle{
+  width:22px;height:22px;border-radius:50%;border:2px solid #bdc3c7;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.2s;
+}
+.ck-circle.ok{border-color:#27ae60;background:#27ae60}
+.ck-circle.ok svg{fill:white;width:12px;height:12px}
+.ck-label{font-size:13px;transition:.15s}.ck-label.ok{color:#27ae60;text-decoration:line-through}
 
-/* TAREFA */
-.ti{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--bd);cursor:pointer;transition:.15s}
-.ti:hover{background:#fafafa}.ti:last-child{border-bottom:none}
-.t-av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0}
-.t-nm{font-size:14px;font-weight:500}.t-sb{font-size:12px;color:var(--dm);margin-top:2px}
-.tc{margin-left:auto;font-size:11px;padding:2px 9px;border-radius:99px;font-weight:700}
-.tc-r{background:var(--rd-bg);color:var(--rd)}.tc-o{background:var(--or-bg);color:var(--or)}.tc-g{background:var(--gn-bg);color:var(--gn)}
+/* === ARMAS === */
+.arma-card{
+  border:1px solid var(--bd);border-radius:6px;padding:14px;
+  margin-bottom:10px;display:flex;align-items:flex-start;gap:12px;background:#fff;
+}
+.arma-ico{font-size:28px;flex-shrink:0;margin-top:2px}
+.arma-nome{font-size:14px;font-weight:700;margin-bottom:3px}
+.arma-det{font-size:12px;color:var(--dm);line-height:1.6}
+.arma-cr-ok{color:var(--gn);font-weight:700}
+.arma-cr-exp{color:var(--rd);font-weight:700}
 
-/* PROC STATS */
-.ps-g{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:14px}
-.ps-c{border:1px solid var(--bd);border-radius:4px;padding:11px;text-align:center}
-.ps-l{font-size:10px;color:var(--dm);margin-bottom:3px;text-transform:uppercase;letter-spacing:.03em}.ps-n{font-size:20px;font-weight:700}
+/* === TAREFAS === */
+.tarefa-row{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 18px;border-bottom:1px solid var(--bd);cursor:pointer;transition:.15s;
+}
+.tarefa-row:hover{background:#f8f9fa}
+.tarefa-row:last-child{border-bottom:none}
+.tarefa-av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0}
+.tarefa-nm{font-size:14px;font-weight:600}
+.tarefa-sub{font-size:12px;color:var(--dm);margin-top:2px}
+.urgencia-badge{margin-left:auto;font-size:11px;padding:2px 10px;border-radius:99px;font-weight:700}
+.ub-red{background:#fdedec;color:#e74c3c}
+.ub-or{background:#fef9e7;color:#ca6f1e}
+.ub-gn{background:#d5f5e3;color:#1e8449}
 
-/* ARMA CARD */
-.ac{border:1px solid var(--bd);border-radius:4px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px}
-.ac-ic{font-size:28px;flex-shrink:0}
-.ac-nm{font-size:14px;font-weight:600}
-.ac-mt{font-size:12px;color:var(--dm);margin-top:3px}
-.ac-ac{margin-left:auto;display:flex;gap:6px}
+/* === MODAL === */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;
+  display:none;align-items:center;justify-content:center;padding:16px;
+}
+.modal-overlay.on{display:flex}
+.modal-box{
+  background:#fff;border-radius:8px;width:100%;max-width:660px;
+  max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);
+}
+.modal-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px;border-bottom:1px solid var(--bd);
+  position:sticky;top:0;background:#fff;z-index:1;
+}
+.modal-title{font-size:16px;font-weight:700;color:var(--tx)}
+.modal-cls{background:none;border:none;font-size:26px;cursor:pointer;color:var(--dm);line-height:1;padding:0 4px}
+.modal-cls:hover{color:var(--tx)}
+.modal-body{padding:20px}
+.modal-footer{padding:14px 20px;border-top:1px solid var(--bd);display:flex;gap:8px;justify-content:flex-end;background:#f8f9fa;border-radius:0 0 8px 8px}
 
-/* MODAL */
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;display:none;align-items:center;justify-content:center;padding:16px}
-.modal.on{display:flex}
-.m-box{background:#fff;border-radius:4px;width:100%;max-width:640px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2)}
-.m-h{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--bd);position:sticky;top:0;background:#fff;z-index:1}
-.m-t{font-size:16px;font-weight:500}
-.m-cls{background:none;border:none;font-size:24px;cursor:pointer;color:var(--dm);line-height:1}
-.m-b{padding:18px}.m-f{padding:12px 18px;border-top:1px solid var(--bd);display:flex;gap:8px;justify-content:flex-end}
-
-/* TOAST */
-#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);background:#323232;color:#fff;padding:10px 22px;border-radius:4px;font-size:13px;z-index:9999;transition:.3s;opacity:0;pointer-events:none;box-shadow:0 3px 10px rgba(0,0,0,.3)}
+/* === TOAST === */
+#toast{
+  position:fixed;bottom:24px;left:50%;
+  transform:translateX(-50%) translateY(70px);
+  background:#2c3e50;color:#fff;padding:11px 24px;border-radius:6px;
+  font-size:13px;z-index:9999;transition:.3s;opacity:0;pointer-events:none;
+  box-shadow:0 4px 14px rgba(0,0,0,.3);font-weight:500;
+}
 #toast.on{transform:translateX(-50%) translateY(0);opacity:1}
-#toast.ok{background:var(--gn)}#toast.err{background:var(--rd)}#toast.warn{background:var(--or)}
+#toast.ok{background:#27ae60}#toast.err{background:#e74c3c}#toast.warn{background:#ca6f1e}
 
-/* CAT BTNS */
-.cat-btn{padding:5px 12px;border-radius:99px;font-size:12px;cursor:pointer;border:1px solid var(--bd);background:var(--wh);color:var(--dm);transition:.15s}
-.cat-btn.on{background:var(--pr);color:#fff;border-color:var(--pr)}
+/* === GRÁFICO === */
+.grafico-canvas{width:100%;border-radius:4px;display:block}
 
-/* RESPONSIVE */
+/* === VOZ STATUS === */
+#voz-status{font-size:12px;color:var(--az);padding:3px 0 6px;display:none}
+
+/* === PAGINAÇÃO === */
+.pag{display:flex;align-items:center;gap:6px;padding:14px 18px;border-top:1px solid var(--bd);font-size:12px;color:var(--dm)}
+
+/* === INDICADORES === */
+.ind-titulo{font-size:14px;font-weight:600;margin-bottom:4px;padding:14px 18px 0}
+.ind-sub{font-size:12px;color:var(--dm);padding:0 18px 10px}
+.ind-vazio{text-align:center;padding:24px;color:var(--mt);font-size:13px}
+
+/* === RESP === */
 @media(max-width:768px){
-  #sb{transform:translateX(-100%)}#sb.open{transform:translateX(0)}
-  #main{margin-left:0;padding:12px 12px 48px}
-  .ig,.fg{grid-template-columns:1fr}.ps-g{grid-template-columns:1fr 1fr}
-  .ph{flex-wrap:wrap}.p-ac{margin-left:0;width:100%}
+  #sidebar{transform:translateX(-100%)}
+  #sidebar.sb-open{transform:translateX(0)}
+  #main-wrap{margin-left:0}
+  #content{padding:14px}
+  .info-2col,.form-2col{grid-template-columns:1fr}
+  .proc-stats-grid,.proc-stats-grid2{grid-template-columns:1fr 1fr}
+  .cards-resumo{gap:8px}
+  .perfil-hdr{flex-wrap:wrap}
+  .perfil-acoes{margin-left:0;width:100%}
 }
 </style>
 </head>
 <body>
 
-<!-- HEADER -->
-<div id="hdr">
-  <button class="hbtn" onclick="toggleSb()"><svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3zm0-5h18v-2H3zm0-7v2h18V6z"/></svg></button>
-  <div id="hdr-brand"><span class="lg">CH</span> Gestão Premium</div>
-  <span id="hdr-cnt">0 clientes</span>
-  <button id="hdr-sync" onclick="importar()">&#128260; Sync</button>
-  <div class="hdr-nb"><button class="hbtn" onclick="irPg('alertas')"><svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2m6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1z"/></svg></button><span class="nb-dot" id="nb-dot"></span></div>
-  <div id="hdr-av">FC</div>
-</div>
+<div id="app">
 
 <!-- SIDEBAR -->
-<div id="sb">
-  <div style="padding:4px 0">
-    <button class="ni on" id="ni-home" onclick="irPg('home')"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>Home</button>
-    <button class="ni" id="ni-pessoas" onclick="irPg('pessoas')"><svg viewBox="0 0 24 24"><path d="M20 0H4v2h16zM4 24h16v-2H4zM20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2m-8 2.75c1.24 0 2.25 1.01 2.25 2.25s-1.01 2.25-2.25 2.25S9.75 10.24 9.75 9 10.76 6.75 12 6.75M17 17H7v-1.5c0-1.67 3.33-2.5 5-2.5s5 .83 5 2.5z"/></svg>Pessoas<span class="n-badge" id="nb-ps">0</span></button>
-    <div class="ndiv"></div>
-    <button class="ni" id="ni-processos" onclick="irPg('processos')"><svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>Processos<span class="n-badge" id="nb-pr">0</span></button>
-    <button class="ni" id="ni-alertas" onclick="irPg('alertas')"><svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>Alertas<span class="n-badge rd" id="nb-al"></span></button>
-    <button class="ni" id="ni-relatorios" onclick="irPg('relatorios')"><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2M9 17H7v-7h2zm4 0h-2V7h2zm4 0h-2v-4h2z"/></svg>Relatórios</button>
-    <div class="ndiv"></div>
-    <button class="ni" id="ni-config" onclick="irPg('config')"><svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6"/></svg>Config</button>
+<div id="sidebar">
+  <div class="sb-logo">
+    <span class="sb-logo-badge">CH</span>
+    <div>
+      <div class="sb-logo-txt">Gestão Premium</div>
+      <div class="sb-logo-sub">Despachante de Armas</div>
+    </div>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-section-label">Principal</div>
+    <div class="sb-item on" id="ni-home" onclick="irPg('home')">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      Home
+    </div>
+    <div class="sb-item" id="ni-pessoas" onclick="irPg('pessoas')">
+      <svg viewBox="0 0 24 24"><path d="M20 0H4v2h16zM4 24h16v-2H4zM20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2m-8 2.75c1.24 0 2.25 1.01 2.25 2.25s-1.01 2.25-2.25 2.25S9.75 10.24 9.75 9 10.76 6.75 12 6.75M17 17H7v-1.5c0-1.67 3.33-2.5 5-2.5s5 .83 5 2.5z"/></svg>
+      Pessoas
+      <span class="sb-badge" id="nb-pessoas">0</span>
+    </div>
+    <div class="sb-div"></div>
+    <div class="sb-section-label">Operacional</div>
+    <div class="sb-item" id="ni-processos" onclick="irPg('processos')">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>
+      Processos
+      <span class="sb-badge" id="nb-processos">0</span>
+    </div>
+    <div class="sb-item" id="ni-alertas" onclick="irPg('alertas')">
+      <svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+      Alertas
+      <span class="sb-badge rd" id="nb-alertas"></span>
+    </div>
+    <div class="sb-item" id="ni-relatorios" onclick="irPg('relatorios')">
+      <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2M9 17H7v-7h2zm4 0h-2V7h2zm4 0h-2v-4h2z"/></svg>
+      Relatórios
+    </div>
+    <div class="sb-div"></div>
+    <div class="sb-section-label">Sistema</div>
+    <div class="sb-item" id="ni-config" onclick="irPg('config')">
+      <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6"/></svg>
+      Configurações
+    </div>
+  </nav>
+  <div class="sb-footer">
+    <div class="sb-footer-txt">CH Gestão Premium v3.0</div>
   </div>
 </div>
 
 <!-- MAIN -->
-<div id="main">
+<div id="main-wrap">
 
-<!-- HOME -->
-<div class="pg on" id="pg-home">
-  <div id="sync-bar"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg><span id="sync-msg">Sincronizando...</span></div>
-  <p style="font-size:16px;margin-bottom:12px;color:var(--tx)">Resumo</p>
-  <div class="r-row">
-    <div class="rc" onclick="irPg('pessoas')"><div class="rc-l">Pessoas</div><div class="rc-n" id="r-ps">0</div></div>
-    <div class="rc" onclick="irPg('pessoas')"><div class="rc-l">CTR</div><div class="rc-n" id="r-ctr">0</div></div>
-    <div class="rc" onclick="irPg('pessoas')"><div class="rc-l">CH</div><div class="rc-n" id="r-ch">0</div></div>
-    <div class="rc" onclick="irPg('processos')"><div class="rc-l">Processos</div><div class="rc-n" id="r-proc">0</div></div>
-    <div class="rc" onclick="irPg('alertas')"><div class="rc-l">Alertas</div><div class="rc-n" id="r-al" style="color:var(--rd)">0</div></div>
+<!-- TOPBAR -->
+<div id="topbar">
+  <button id="tb-toggle" onclick="toggleSb()">
+    <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3zm0-5h18v-2H3zm0-7v2h18V6z"/></svg>
+  </button>
+  <div id="tb-breadcrumb"><strong id="tb-bc-title">Home</strong></div>
+  <button id="tb-sync-btn" onclick="importar()">
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+    Sincronizar
+  </button>
+  <span id="hdr-cnt" style="font-size:12px;color:var(--dm);background:#f0f3f4;padding:4px 10px;border-radius:99px">0 clientes</span>
+  <div style="position:relative">
+    <button id="tb-alert-btn" onclick="irPg('alertas')">
+      <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2m6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1z"/></svg>
+      <span class="tb-notif-dot" id="notif-dot"></span>
+    </button>
   </div>
+  <div id="tb-user">
+    <div id="tb-av">FC</div>
+    <span style="font-size:12px;color:var(--dm)">Clarindo</span>
+  </div>
+</div>
+
+<!-- CONTEÚDO -->
+<div id="content">
+
+<!-- ═══════════════ HOME ═══════════════ -->
+<div class="pg on" id="pg-home">
+
+  <div id="sync-banner">
+    <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+    <span id="sync-msg">Sincronizando...</span>
+  </div>
+
+  <p style="font-size:16px;font-weight:600;margin-bottom:14px;color:var(--tx)">Resumo</p>
+  <div class="cards-resumo">
+    <div class="card-res" onclick="irPg('pessoas')">
+      <div class="card-res-label">Pessoas</div>
+      <div class="card-res-num" id="r-pessoas">0</div>
+    </div>
+    <div class="card-res" onclick="irPg('pessoas')">
+      <div class="card-res-label">CTR</div>
+      <div class="card-res-num" id="r-ctr">0</div>
+    </div>
+    <div class="card-res" onclick="irPg('pessoas')">
+      <div class="card-res-label">CH</div>
+      <div class="card-res-num" id="r-ch">0</div>
+    </div>
+    <div class="card-res" onclick="irPg('processos')">
+      <div class="card-res-label">Processos</div>
+      <div class="card-res-num" id="r-proc">0</div>
+    </div>
+    <div class="card-res" onclick="irPg('alertas')">
+      <div class="card-res-label">Alertas</div>
+      <div class="card-res-num" id="r-al" style="color:#e74c3c">0</div>
+    </div>
+  </div>
+
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+    <!-- Tarefas -->
     <div class="box">
-      <div class="bx-h">
-        <span class="bx-t">Tarefas a realizar</span>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--mt)" title="Processos pendentes por pessoa"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8"/></svg>
-        <button onclick="renderTarefas()" title="Atualizar" style="width:28px;height:28px;border-radius:50%;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="16" height="16" fill="var(--dm)"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4z"/></svg></button>
+      <div class="box-hdr">
+        <span class="box-title">Tarefas a realizar</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--mt)" title="Processos pendentes agrupados por pessoa"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8"/></svg>
+        <button onclick="renderTarefas()" style="width:28px;height:28px;border-radius:50%;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-left:4px" title="Atualizar lista de tarefas">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="var(--dm)"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4z"/></svg>
+        </button>
       </div>
-      <div class="bx-s">Visualize as pessoas com processos que merecem atenção.</div>
+      <div class="box-sub" style="padding-bottom:6px">Visualize as pessoas que possuem processos que merecem a sua atenção.</div>
       <div id="tarefas-lista"></div>
     </div>
+
+    <!-- Documentos para renovar -->
     <div class="box">
-      <div class="bx-h"><span class="bx-t">Sobre os processos</span></div>
-      <div class="ps-g">
-        <div class="ps-c"><div class="ps-l">Aguardando</div><div class="ps-n" id="ps-agu">0</div></div>
-        <div class="ps-c"><div class="ps-l">Em execução</div><div class="ps-n" id="ps-exe">0</div></div>
-        <div class="ps-c"><div class="ps-l">Protocolados</div><div class="ps-n" id="ps-prt">0</div></div>
-        <div class="ps-c"><div class="ps-l">Finalizados</div><div class="ps-n" id="ps-fin" style="color:var(--gn)">0</div></div>
+      <div class="box-hdr">
+        <span class="box-title">Documentos para renovar</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--mt)"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8"/></svg>
       </div>
-      <div style="border-top:1px solid var(--bd)">
-        <div class="ps-g" style="grid-template-columns:1fr 1fr 1fr">
-          <div class="ps-c"><div class="ps-l">Novos (7d)</div><div class="ps-n" id="ps-new">0</div></div>
-          <div class="ps-c"><div class="ps-l">+60 dias</div><div class="ps-n" id="ps-old">0</div></div>
-          <div class="ps-c"><div class="ps-l">Sem mov.</div><div class="ps-n" id="ps-smov" style="color:var(--or)">0</div></div>
+      <div class="box-sub">Relação de documentos passíveis de renovação em D-30 e D+90.</div>
+      <div style="padding:8px 18px;display:flex;gap:8px">
+        <button class="btn-pri btn-sm" id="btn-venc" onclick="filtrarVenc('vencidos')">Vencidos (<span id="cnt-venc">0</span>)</button>
+        <button class="btn-sec btn-sm" id="btn-avenc" onclick="filtrarVenc('avencer')">A vencer (<span id="cnt-avenc">0</span>)</button>
+      </div>
+      <div id="lista-venc">
+        <div class="box-empty" style="padding:20px">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8z"/></svg>
+          <p style="font-size:13px">Tudo certo por aqui! Nenhum documento a vencer no período.</p>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Processos stats -->
+  <div class="box">
+    <div class="box-hdr">
+      <span class="box-title">Processos</span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--mt)"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8"/></svg>
+      <span style="flex:1"></span>
+      <span style="font-size:12px;color:var(--pr);cursor:pointer" onclick="irPg('processos')">Ver todos os processos</span>
+    </div>
+    <div class="box-sub">Indicadores e distribuição por situação no seu sistema.</div>
+    <div style="padding:12px 18px">
+      <div style="font-size:12px;font-weight:600;color:var(--dm);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Sobre os processos</div>
+    </div>
+    <div class="proc-stats-grid">
+      <div class="proc-stat-cell"><div class="proc-stat-label">Aguardando</div><div class="proc-stat-num" id="ps-agu">0</div></div>
+      <div class="proc-stat-cell"><div class="proc-stat-label">Em Execução</div><div class="proc-stat-num" id="ps-exe">0</div></div>
+      <div class="proc-stat-cell"><div class="proc-stat-label">Protocolar</div><div class="proc-stat-num" id="ps-prot1">0</div></div>
+      <div class="proc-stat-cell"><div class="proc-stat-label">Protocolados ¹</div><div class="proc-stat-num" id="ps-prot2">0</div></div>
+    </div>
+    <div style="padding:12px 18px 6px">
+      <div style="font-size:12px;font-weight:600;color:var(--dm);text-transform:uppercase;letter-spacing:.05em">Movimentações e prazos</div>
+    </div>
+    <div class="proc-stats-grid2">
+      <div class="proc-stat-cell"><div class="proc-stat-label">Novos 7 dias</div><div class="proc-stat-num" id="ps-new">0</div></div>
+      <div class="proc-stat-cell"><div class="proc-stat-label">+ que 60 dias</div><div class="proc-stat-num" id="ps-old">0</div></div>
+      <div class="proc-stat-cell"><div class="proc-stat-label">Sem movimentos ²</div><div class="proc-stat-num" id="ps-smov" style="color:#e74c3c">0</div></div>
+    </div>
+    <div style="padding:10px 18px;border-top:1px solid var(--bd)">
+      <p style="font-size:11px;color:var(--mt)">¹ Processos protocolados são aqueles protocolados sem encerramento ou com resposta ainda em análise.</p>
+      <p style="font-size:11px;color:var(--mt)">² Sem movimento: não protocolados e sem movimentação registrada nos últimos 7 dias.</p>
+    </div>
+  </div>
+
+  <!-- Indicadores -->
+  <div class="box">
+    <div class="box-hdr"><span class="box-title">Indicadores operacionais</span></div>
+    <div class="ind-titulo">Por serviços a realizar</div>
+    <div id="ind-graf-serv">
+      <div class="ind-vazio">Não há dados por serviço para exibir no gráfico.</div>
+    </div>
+    <div style="border-top:1px solid var(--bd);padding-top:0">
+      <div class="ind-titulo" style="margin-top:10px">Distribuição por situação</div>
+      <div id="ind-graf-sit">
+        <canvas id="grf-sit" height="140" style="padding:8px 18px;display:block;width:calc(100% - 36px)"></canvas>
       </div>
     </div>
   </div>
 </div>
 
-<!-- PESSOAS -->
+<!-- ═══════════════ PESSOAS ═══════════════ -->
 <div class="pg" id="pg-pessoas">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-    <h2 style="font-size:18px;font-weight:500">Pessoas</h2>
-    <button class="btn-p" onclick="abrirModalPessoa('')"><svg viewBox="0 0 24 24" width="18" height="18" fill="white"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>Nova Pessoa</button>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <h2 style="font-size:18px;font-weight:700;color:var(--tx)">Pessoas</h2>
+    <button class="btn-pri" onclick="abrirModalPessoa('')">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="white"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+      Nova Pessoa
+    </button>
   </div>
-  <div class="sb-row">
-    <input class="s-inp" id="srch-ps" placeholder="Buscar por nome, CPF ou código..." oninput="renderPs()">
-    <button id="btn-voz" class="btn-s" onclick="buscaVoz()" title="Busca por voz" style="padding:0 12px;font-size:18px">&#127908;</button>
+  <div class="search-row">
+    <input class="search-inp" id="srch-ps" placeholder="Digite o nome da pessoa para buscar..." oninput="renderPs()">
+    <button class="btn-voz" onclick="buscaVoz()" title="Busca por voz">&#127908;</button>
   </div>
-  <div id="voz-st" style="font-size:12px;color:var(--pr);padding:2px 0 6px;display:none">&#127908; Ouvindo... fale o nome</div>
-  <div class="box" id="lista-ps"></div>
+  <div id="voz-status">&#127908; Ouvindo... fale o nome do cliente</div>
+  <ul class="pessoa-lista" id="lista-pessoas"></ul>
 </div>
 
-<!-- PERFIL -->
+<!-- ═══════════════ PERFIL PESSOA ═══════════════ -->
 <div class="pg" id="pg-perfil">
-  <div class="ph">
-    <div class="pf-av" id="pf-av">?</div>
-    <div>
-      <div style="font-size:20px;font-weight:500" id="pf-nm">—</div>
-      <div style="font-size:13px;color:var(--dm);margin-top:4px" id="pf-mt">—</div>
+
+  <div class="perfil-hdr">
+    <div class="perfil-av-wrap">
+      <div class="perfil-av" id="pf-av">?</div>
     </div>
-    <div class="p-ac">
-      <button class="btn-s" onclick="irPg('pessoas')">&#8592; Voltar</button>
-      <button class="btn-p" onclick="editarPessoa()">&#9998; Editar</button>
-      <button class="btn-s" onclick="toggleAtivoAtual()" id="btn-ativo-toggle">Inativar</button>
+    <div style="flex:1;min-width:0">
+      <div class="perfil-nome" id="pf-nome">—</div>
+      <div class="perfil-meta" id="pf-meta">—</div>
     </div>
-  </div>
-  <div class="tab-bar">
-    <button class="tab-b on" onclick="abaP('vis')">Visão Geral</button>
-    <button class="tab-b" onclick="abaP('proc')">Processos</button>
-    <button class="tab-b" onclick="abaP('decl')">Declarações</button>
-    <button class="tab-b" onclick="abaP('check')">&#9989; Checklist</button>
-    <button class="tab-b" onclick="abaP('armas')">&#128299; Armas</button>
-    <button class="tab-b" onclick="abaP('docs')">Documentos</button>
-    <button class="tab-b" onclick="abaP('hist')">Histórico</button>
+    <div class="perfil-acoes">
+      <button class="btn-sec" onclick="irPg('pessoas')">&#8592; Voltar</button>
+      <button class="btn-pri" onclick="editarPessoa()">&#9998; Editar</button>
+      <button class="btn-warn btn-sm" id="btn-toggle-ativo" onclick="toggleAtivoAtual()">Inativar</button>
+    </div>
   </div>
 
-  <!-- VIS -->
-  <div class="tab-p on" id="tab-vis">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+  <div class="tab-nav">
+    <button class="tab-btn on" onclick="abaP('vis')">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5M12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5m0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3"/></svg>
+      Visão Geral
+    </button>
+    <button class="tab-btn" onclick="abaP('proc')">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg>
+      Processos
+    </button>
+    <button class="tab-btn" onclick="abaP('decl')">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+      Declarações
+    </button>
+    <button class="tab-btn" onclick="abaP('check')">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+      Checklist
+    </button>
+    <button class="tab-btn" onclick="abaP('armas')">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M7 8H5a3 3 0 0 0-3 3v2h2v4h2v-4h6l3 4h2l-3-4h1a4 4 0 0 0 0-8H7m0 6v-4h10a2 2 0 0 1 0 4z"/></svg>
+      Armas
+    </button>
+    <button class="tab-btn" onclick="abaP('docs')">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg>
+      Documentos
+    </button>
+    <button class="tab-btn" onclick="abaP('hist')">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+      Histórico
+    </button>
+  </div>
+
+  <!-- ABA: VISÃO GERAL -->
+  <div class="tab-pane on" id="tab-vis">
+    <div style="display:grid;grid-template-columns:3fr 2fr;gap:16px">
       <div>
         <div class="box">
-          <div class="bx-h"><span class="bx-t">Dados Pessoais</span></div>
-          <div class="bx-b"><div class="ig" id="pf-dados"></div></div>
+          <div class="box-hdr"><span class="box-title">Dados Pessoais</span></div>
+          <div class="box-body"><div class="info-2col" id="pf-dados"></div></div>
         </div>
-        <div class="box">
-          <div class="bx-h"><span class="bx-t">&#127979; GOV.BR</span></div>
-          <div class="bx-b"><div class="ig" id="pf-gov"></div></div>
+        <div class="gov-box" style="margin-bottom:14px">
+          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--am);margin-bottom:10px">&#127979; Acesso GOV.BR</div>
+          <div class="info-2col" id="pf-gov"></div>
         </div>
       </div>
       <div>
         <div class="box">
-          <div class="bx-h"><span class="bx-t">Processos Ativos</span><button class="btn-p" style="font-size:12px" onclick="abaP('proc')">Ver todos</button></div>
-          <div id="pf-proc-res"></div>
+          <div class="box-hdr">
+            <span class="box-title">Processos Ativos</span>
+            <span style="font-size:12px;color:var(--pr);cursor:pointer" onclick="abaP('proc')">Ver todos</span>
+          </div>
+          <div id="pf-proc-resumo"></div>
         </div>
-        <div class="box" style="margin-top:0">
-          <div class="bx-h"><span class="bx-t">&#128299; Armas Cadastradas</span><button class="btn-s" style="font-size:12px" onclick="abaP('armas')">Gerenciar</button></div>
-          <div id="pf-armas-res"></div>
+        <div class="box">
+          <div class="box-hdr">
+            <span class="box-title">&#128299; Armas</span>
+            <span style="font-size:12px;color:var(--pr);cursor:pointer" onclick="abaP('armas')">Gerenciar</span>
+          </div>
+          <div id="pf-armas-resumo"></div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- PROC -->
-  <div class="tab-p" id="tab-proc">
+  <!-- ABA: PROCESSOS -->
+  <div class="tab-pane" id="tab-proc">
     <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
-      <button class="btn-p" onclick="abrirModal('m-proc')"><svg viewBox="0 0 24 24" width="18" height="18" fill="white"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>Novo Processo</button>
+      <button class="btn-pri" onclick="abrirModal('m-proc')">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="white"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        Novo Processo
+      </button>
     </div>
     <div id="lista-proc-p"></div>
   </div>
 
-  <!-- DECL -->
-  <div class="tab-p" id="tab-decl">
+  <!-- ABA: DECLARAÇÕES -->
+  <div class="tab-pane" id="tab-decl">
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
-      <button class="cat-btn on" onclick="filtrarDecl('todas')" id="dc-todas">Todas</button>
-      <button class="cat-btn" onclick="filtrarDecl('seg')" id="dc-seg">&#128737; Segurança</button>
-      <button class="cat-btn" onclick="filtrarDecl('transf')" id="dc-transf">&#128260; Transferência</button>
-      <button class="cat-btn" onclick="filtrarDecl('res')" id="dc-res">&#127968; Residência</button>
-      <button class="cat-btn" onclick="filtrarDecl('out')" id="dc-out">&#128196; Outros</button>
+      <button class="btn-pri btn-sm on-cat" id="dc-todas" onclick="filtrarDecl('todas')">Todas</button>
+      <button class="btn-sec btn-sm" id="dc-seg" onclick="filtrarDecl('seg')">&#128737; Segurança</button>
+      <button class="btn-sec btn-sm" id="dc-transf" onclick="filtrarDecl('transf')">&#128260; Transferência</button>
+      <button class="btn-sec btn-sm" id="dc-res" onclick="filtrarDecl('res')">&#127968; Residência</button>
+      <button class="btn-sec btn-sm" id="dc-out" onclick="filtrarDecl('out')">&#128196; Outros</button>
     </div>
     <div class="box">
-      <div class="bx-h"><span class="bx-t">Emitir Declaração / Requerimento</span></div>
+      <div class="box-hdr"><span class="box-title">Declarações e Requerimentos</span><span style="font-size:11px;color:var(--mt)">Mala direta automática</span></div>
       <div id="decl-lista">
-        <div class="di" data-cat="seg"><div class="di-ic" style="background:#e8f5e9"><svg viewBox="0 0 24 24" fill="#2e7d32"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5z"/></svg></div><div style="flex:1"><div class="di-nm">Declaração de Segurança do Acervo (DSA)</div><div class="di-ds">Art. 37 Dec. 9.847/2019 · Obrigatória para renovação do CR</div></div><button class="btn-p" onclick="emitir('dsa')">Emitir</button></div>
-        <div class="di" data-cat="seg"><div class="di-ic" style="background:#e3f2fd"><svg viewBox="0 0 24 24" fill="#1976d2"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg></div><div style="flex:1"><div class="di-nm">Declaração de Guarda do Acervo (DGA)</div><div class="di-ds">Responsabilidade sobre a guarda segura do armamento</div></div><button class="btn-p" onclick="emitir('dga')">Emitir</button></div>
-        <div class="di" data-cat="seg"><div class="di-ic" style="background:#f3e5f5"><svg viewBox="0 0 24 24" fill="#7b1fa2"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></div><div style="flex:1"><div class="di-nm">Declaração de 5 Anos</div><div class="di-ds">Art. 5°, §4° Estatuto do Desarmamento · Renovação quinquenal</div></div><button class="btn-p" onclick="emitir('5anos')">Emitir</button></div>
-        <div class="di" data-cat="out"><div class="di-ic" style="background:#f5f5f5"><svg viewBox="0 0 24 24" fill="#616161"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg></div><div style="flex:1"><div class="di-nm">Declaração de Inexistência / Não Inquérito</div><div class="di-ds">Certidão de não responder a Inquérito Policial ou Processo Criminal</div></div><button class="btn-p" onclick="emitir('inex')">Emitir</button></div>
-        <div class="di" data-cat="res"><div class="di-ic" style="background:#e8f5e9"><svg viewBox="0 0 24 24" fill="#2e7d32"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div><div style="flex:1"><div class="di-nm">Declaração de Residência</div><div class="di-ds">Comprovante de endereço declarado</div></div><button class="btn-p" onclick="emitir('res')">Emitir</button></div>
-        <div class="di" data-cat="transf"><div class="di-ic" style="background:#fff3e0"><svg viewBox="0 0 24 24" fill="#e65100"><path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg></div><div style="flex:1"><div class="di-nm">Declaração de Transferência de Propriedade</div><div class="di-ds">Para transferência de arma entre pessoas físicas</div></div><button class="btn-p" onclick="emitir('transf')">Emitir</button></div>
-        <div class="di" data-cat="transf"><div class="di-ic" style="background:#fce4ec"><svg viewBox="0 0 24 24" fill="#c62828"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg></div><div style="flex:1"><div class="di-nm">Procuração para Representação</div><div class="di-ds">Autoriza o despachante a representar perante o Exército</div></div><button class="btn-p" onclick="emitir('proc')">Emitir</button></div>
-        <div class="di" data-cat="out"><div class="di-ic" style="background:#e3f2fd"><svg viewBox="0 0 24 24" fill="#1976d2"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm-1 14H5c-.55 0-1-.45-1-1V9l8 5 8-5v8c0 .55-.45 1-1 1zm-7-7L4 7h16l-8 5z"/></svg></div><div style="flex:1"><div class="di-nm">Requerimento de CR</div><div class="di-ds">Solicitação de Certificado de Registro</div></div><button class="btn-p" onclick="emitir('req-cr')">Emitir</button></div>
-        <div class="di" data-cat="out"><div class="di-ic" style="background:#fff8e1"><svg viewBox="0 0 24 24" fill="#f57f17"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg></div><div style="flex:1"><div class="di-nm">Requerimento de Renovação (RCRAF)</div><div class="di-ds">Renovação do Certificado de Registro de Arma de Fogo</div></div><button class="btn-p" onclick="emitir('req-ren')">Emitir</button></div>
+        <div class="decl-row" data-cat="seg"><div class="decl-ico" style="background:#d5f5e3"><svg viewBox="0 0 24 24" fill="#1e8449"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5z"/></svg></div><div style="flex:1"><div class="decl-nome">Declaração de Segurança do Acervo (DSA)</div><div class="decl-desc">Art. 37 Dec. 9.847/2019 — obrigatória para renovação do CR</div><div class="decl-id">ID: 1e4FaQKdbhgs...</div></div><button class="btn-pri btn-sm" onclick="emitir('dsa')">Emitir</button></div>
+        <div class="decl-row" data-cat="seg"><div class="decl-ico" style="background:#d6eaf8"><svg viewBox="0 0 24 24" fill="#1f618d"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg></div><div style="flex:1"><div class="decl-nome">Declaração de Guarda do Acervo (DGA)</div><div class="decl-desc">Responsabilidade sobre a guarda segura do armamento</div><div class="decl-id">ID: 1xaam1qBLXbi...</div></div><button class="btn-pri btn-sm" onclick="emitir('dga')">Emitir</button></div>
+        <div class="decl-row" data-cat="seg"><div class="decl-ico" style="background:#e8daef"><svg viewBox="0 0 24 24" fill="#7d3c98"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></div><div style="flex:1"><div class="decl-nome">Declaração de 5 Anos</div><div class="decl-desc">Art. 5°, §4° Estatuto do Desarmamento — renovação quinquenal</div><div class="decl-id">ID: 1xBh1tkPMTb...</div></div><button class="btn-pri btn-sm" onclick="emitir('5anos')">Emitir</button></div>
+        <div class="decl-row" data-cat="out"><div class="decl-ico" style="background:#f2f3f4"><svg viewBox="0 0 24 24" fill="#7f8c8d"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg></div><div style="flex:1"><div class="decl-nome">Declaração de Inexistência / Não Inquérito</div><div class="decl-desc">Certidão de não responder a Inquérito Policial ou Processo Criminal</div><div class="decl-id">ID: 1_UU0mqRlyLK...</div></div><button class="btn-pri btn-sm" onclick="emitir('inex')">Emitir</button></div>
+        <div class="decl-row" data-cat="res"><div class="decl-ico" style="background:#d5f5e3"><svg viewBox="0 0 24 24" fill="#1e8449"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></div><div style="flex:1"><div class="decl-nome">Declaração de Residência</div><div class="decl-desc">Comprovante de endereço declarado</div><div class="decl-id">ID: 1G0mdl2-dJoo...</div></div><button class="btn-pri btn-sm" onclick="emitir('res')">Emitir</button></div>
+        <div class="decl-row" data-cat="transf"><div class="decl-ico" style="background:#fef9e7"><svg viewBox="0 0 24 24" fill="#b7950b"><path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg></div><div style="flex:1"><div class="decl-nome">Declaração de Transferência de Propriedade</div><div class="decl-desc">Para transferência de arma entre pessoas físicas</div></div><button class="btn-pri btn-sm" onclick="emitir('transf')">Emitir</button></div>
+        <div class="decl-row" data-cat="transf"><div class="decl-ico" style="background:#fdedec"><svg viewBox="0 0 24 24" fill="#cb4335"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg></div><div style="flex:1"><div class="decl-nome">Procuração para Representação</div><div class="decl-desc">Autoriza o despachante a representar o titular perante o Exército</div></div><button class="btn-pri btn-sm" onclick="emitir('proc')">Emitir</button></div>
+        <div class="decl-row" data-cat="out"><div class="decl-ico" style="background:#d6eaf8"><svg viewBox="0 0 24 24" fill="#1f618d"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm-1 14H5c-.55 0-1-.45-1-1V9l8 5 8-5v8c0 .55-.45 1-1 1zm-7-7L4 7h16l-8 5z"/></svg></div><div style="flex:1"><div class="decl-nome">Requerimento de CR — Certificado de Registro</div><div class="decl-desc">Solicitação de registro inicial de arma de fogo</div></div><button class="btn-pri btn-sm" onclick="emitir('req-cr')">Emitir</button></div>
+        <div class="decl-row" data-cat="out"><div class="decl-ico" style="background:#fef9e7"><svg viewBox="0 0 24 24" fill="#ca6f1e"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4z"/></svg></div><div style="flex:1"><div class="decl-nome">Requerimento de Renovação (RCRAF)</div><div class="decl-desc">Renovação do Certificado de Registro de Arma de Fogo</div></div><button class="btn-pri btn-sm" onclick="emitir('req-ren')">Emitir</button></div>
       </div>
     </div>
     <div class="box" style="margin-top:0">
-      <div class="bx-h"><span class="bx-t">Histórico de Emissões</span></div>
+      <div class="box-hdr"><span class="box-title">Histórico de Emissões</span></div>
       <div id="hist-emiss"></div>
     </div>
   </div>
 
-  <!-- CHECKLIST -->
-  <div class="tab-p" id="tab-check">
+  <!-- ABA: CHECKLIST -->
+  <div class="tab-pane" id="tab-check">
     <div class="box">
-      <div class="bx-h"><span class="bx-t">&#9989; Checklist de Documentos</span><button class="btn-p" style="font-size:12px" onclick="gerarPDF()">&#128196; Relatório PDF</button></div>
-      <div class="bx-s">Marque os documentos recebidos do cliente. Checklist salvo por processo.</div>
-      <div class="bx-b" id="chk-corpo"></div>
+      <div class="box-hdr">
+        <span class="box-title">Checklist de Documentos</span>
+        <button class="btn-sec btn-sm" onclick="gerarPDF()">&#128196; Gerar PDF</button>
+      </div>
+      <div class="box-sub">Marque os documentos recebidos. Salvo por processo.</div>
+      <div class="box-body">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px">
+          <span style="color:var(--dm)" id="chk-count">0 de 20</span>
+          <span style="font-weight:700" id="chk-pct">0%</span>
+        </div>
+        <div class="ck-progress"><div class="ck-fill" id="chk-fill" style="width:0%;background:var(--pr)"></div></div>
+        <div id="chk-lista"></div>
+      </div>
     </div>
   </div>
 
-  <!-- ARMAS -->
-  <div class="tab-p" id="tab-armas">
+  <!-- ABA: ARMAS -->
+  <div class="tab-pane" id="tab-armas">
     <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
-      <button class="btn-p" onclick="abrirModal('m-arma')"><svg viewBox="0 0 24 24" width="18" height="18" fill="white"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>Cadastrar Arma</button>
+      <button class="btn-pri" onclick="abrirModal('m-arma')">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="white"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        Cadastrar Arma
+      </button>
     </div>
     <div id="lista-armas-p"></div>
   </div>
 
-  <!-- DOCS -->
-  <div class="tab-p" id="tab-docs">
+  <!-- ABA: DOCUMENTOS -->
+  <div class="tab-pane" id="tab-docs">
     <div class="box">
-      <div class="bx-h"><span class="bx-t">Documentos Gerados</span><span id="pasta-lk" style="font-size:12px;color:var(--pr);cursor:pointer;margin-left:auto" onclick="abrirPasta()">&#128193; Ver no Drive</span></div>
+      <div class="box-hdr">
+        <span class="box-title">Documentos Gerados</span>
+        <span id="pasta-lk" style="font-size:12px;color:var(--pr);cursor:pointer" onclick="abrirPasta()">&#128193; Pasta no Drive</span>
+      </div>
       <div id="lista-docs-p"></div>
     </div>
   </div>
 
-  <!-- HIST -->
-  <div class="tab-p" id="tab-hist">
+  <!-- ABA: HISTÓRICO -->
+  <div class="tab-pane" id="tab-hist">
     <div class="box">
-      <div class="bx-h"><span class="bx-t">&#128203; Histórico de Alterações</span></div>
+      <div class="box-hdr"><span class="box-title">&#128203; Histórico de Alterações</span></div>
       <div id="hist-log"></div>
     </div>
   </div>
-</div>
 
-<!-- PROCESSOS -->
+</div><!-- /pg-perfil -->
+
+<!-- ═══════════════ PROCESSOS ═══════════════ -->
 <div class="pg" id="pg-processos">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-    <h2 style="font-size:18px;font-weight:500">Processos</h2>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <h2 style="font-size:18px;font-weight:700">Processos</h2>
   </div>
-  <div class="sb-row"><input class="s-inp" id="srch-pr" placeholder="Buscar por cliente ou protocolo..." oninput="renderProcessos()"></div>
-  <div id="lista-proc"></div>
+  <div class="search-row">
+    <input class="search-inp" id="srch-pr" placeholder="Buscar por cliente, tipo ou protocolo..." oninput="renderProcessos()">
+  </div>
+  <div id="lista-processos"></div>
 </div>
 
-<!-- ALERTAS -->
+<!-- ═══════════════ ALERTAS ═══════════════ -->
 <div class="pg" id="pg-alertas">
-  <h2 style="font-size:18px;font-weight:500;margin-bottom:14px">Alertas</h2>
+  <h2 style="font-size:18px;font-weight:700;margin-bottom:16px">Alertas</h2>
   <div id="lista-alertas"></div>
 </div>
 
-<!-- RELATÓRIOS -->
+<!-- ═══════════════ RELATÓRIOS ═══════════════ -->
 <div class="pg" id="pg-relatorios">
-  <h2 style="font-size:18px;font-weight:500;margin-bottom:14px">Relatórios</h2>
+  <h2 style="font-size:18px;font-weight:700;margin-bottom:16px">Relatórios</h2>
   <div class="box" style="margin-bottom:14px">
-    <div class="bx-h"><span class="bx-t">Resumo Geral</span></div>
-    <div class="ps-g" style="grid-template-columns:repeat(5,1fr)">
-      <div class="ps-c"><div class="ps-l">Pessoas</div><div class="ps-n" id="rel-tot">0</div></div>
-      <div class="ps-c"><div class="ps-l">CTR</div><div class="ps-n" id="rel-ctr">0</div></div>
-      <div class="ps-c"><div class="ps-l">CH</div><div class="ps-n" id="rel-ch">0</div></div>
-      <div class="ps-c"><div class="ps-l">Proc. Ativos</div><div class="ps-n" id="rel-prat">0</div></div>
-      <div class="ps-c"><div class="ps-l">Finalizados</div><div class="ps-n" id="rel-fin">0</div></div>
+    <div class="box-hdr"><span class="box-title">Resumo Geral</span></div>
+    <div class="proc-stats-grid" style="grid-template-columns:repeat(5,1fr)">
+      <div class="proc-stat-cell"><div class="proc-stat-label">Pessoas</div><div class="proc-stat-num" id="rel-ps">0</div></div>
+      <div class="proc-stat-cell"><div class="proc-stat-label">CTR</div><div class="proc-stat-num" id="rel-ctr">0</div></div>
+      <div class="proc-stat-cell"><div class="proc-stat-label">CH</div><div class="proc-stat-num" id="rel-ch">0</div></div>
+      <div class="proc-stat-cell"><div class="proc-stat-label">Proc. Ativos</div><div class="proc-stat-num" id="rel-prat">0</div></div>
+      <div class="proc-stat-cell"><div class="proc-stat-label">Finalizados</div><div class="proc-stat-num" id="rel-fin">0</div></div>
     </div>
   </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px">
-    <div class="box"><div class="bx-h"><span class="bx-t">&#128202; Processos por Mês</span></div><div class="bx-b" style="padding:8px"><canvas id="grf-mes" height="160"></canvas></div></div>
-    <div class="box"><div class="bx-h"><span class="bx-t">&#128202; Por Tipo de Serviço</span></div><div class="bx-b" style="padding:8px"><canvas id="grf-tipo" height="160"></canvas></div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+    <div class="box"><div class="box-hdr"><span class="box-title">&#128202; Processos por Mês</span></div><div class="box-body" style="padding:8px"><canvas id="grf-mes" height="150" style="width:100%"></canvas></div></div>
+    <div class="box"><div class="box-hdr"><span class="box-title">&#128202; Por Tipo de Serviço</span></div><div class="box-body" style="padding:8px"><canvas id="grf-tipo" height="150" style="width:100%"></canvas></div></div>
   </div>
   <div class="box">
-    <div class="bx-h"><span class="bx-t">Lista por Cliente</span><button class="btn-p" style="font-size:12px" onclick="expPDF()">&#128196; Exportar PDF</button></div>
+    <div class="box-hdr">
+      <span class="box-title">Lista Completa de Clientes</span>
+      <button class="btn-sec btn-sm" onclick="expPDF()">&#128229; Exportar PDF</button>
+    </div>
     <div id="rel-lista"></div>
   </div>
 </div>
 
-<!-- CONFIG -->
+<!-- ═══════════════ CONFIG ═══════════════ -->
 <div class="pg" id="pg-config">
-  <h2 style="font-size:18px;font-weight:500;margin-bottom:14px">Configurações</h2>
+  <h2 style="font-size:18px;font-weight:700;margin-bottom:16px">Configurações</h2>
+
   <div class="box" style="margin-bottom:14px">
-    <div class="bx-h"><span class="bx-t">&#128279; Google Apps Script</span></div>
-    <div class="bx-b">
-      <div class="ff" style="margin-bottom:10px"><label>URL do GAS</label><input id="cfg-gas" placeholder="https://script.google.com/macros/s/.../exec"></div>
+    <div class="box-hdr"><span class="box-title">&#128279; Google Apps Script</span></div>
+    <div class="box-sub">URL gerada ao implantar o código Apps Script na planilha.</div>
+    <div class="box-body">
+      <div class="fld" style="margin-bottom:12px"><label>URL do GAS</label><input id="cfg-gas" placeholder="https://script.google.com/macros/s/.../exec"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn-p" onclick="salvarGas()">&#128190; Salvar e Testar</button>
-        <button class="btn-s" onclick="importar()">&#128260; Reimportar</button>
-        <button class="btn-s" onclick="diagnostico()">&#128269; Diagnóstico</button>
+        <button class="btn-pri" onclick="salvarGas()">&#128190; Salvar e Testar</button>
+        <button class="btn-sec" onclick="importar()">&#128260; Reimportar Dados</button>
+        <button class="btn-sec" onclick="diagnostico()">&#128269; Diagnóstico</button>
       </div>
       <div id="cfg-st" style="margin-top:10px;font-size:13px"></div>
     </div>
   </div>
+
   <div class="box" style="margin-bottom:14px">
-    <div class="bx-h"><span class="bx-t">&#128193; Pastas Google Drive</span></div>
-    <div class="bx-s">Cole o link completo da pasta. O ID é extraído automaticamente.</div>
-    <div class="bx-b">
-      <div class="fg">
-        <div class="ff fw"><label>Pasta Raiz (Geral)</label><input id="cfg-p-raiz" placeholder="https://drive.google.com/drive/folders/..."></div>
-        <div class="ff"><label>Pasta CTR</label><input id="cfg-p-ctr" placeholder="https://drive.google.com/drive/folders/..."></div>
-        <div class="ff"><label>Pasta CH</label><input id="cfg-p-ch" placeholder="https://drive.google.com/drive/folders/..."></div>
+    <div class="box-hdr"><span class="box-title">&#128193; Pastas Google Drive</span></div>
+    <div class="box-sub">Cole o link da pasta — o ID é extraído automaticamente.</div>
+    <div class="box-body">
+      <div class="form-2col">
+        <div class="fld fw"><label>Pasta Raiz (Geral)</label><input id="cfg-p-raiz" placeholder="https://drive.google.com/drive/folders/..."></div>
+        <div class="fld"><label>Pasta CTR</label><input id="cfg-p-ctr" placeholder="https://drive.google.com/drive/folders/..."></div>
+        <div class="fld"><label>Pasta CH</label><input id="cfg-p-ch" placeholder="https://drive.google.com/drive/folders/..."></div>
       </div>
-      <button class="btn-p" style="margin-top:12px" onclick="salvarPastas()">&#128190; Salvar Pastas</button>
+      <button class="btn-pri" style="margin-top:12px" onclick="salvarPastas()">&#128190; Salvar Pastas</button>
     </div>
   </div>
+
   <div class="box" style="margin-bottom:14px">
-    <div class="bx-h"><span class="bx-t">&#128196; IDs dos Templates de Documentos</span></div>
-    <div class="bx-s">ID do Google Docs template para cada declaração. Os IDs abaixo já estão configurados.</div>
-    <div class="bx-b">
-      <div class="fg">
-        <div class="ff"><label>DSA — Segurança do Acervo</label><input id="cfg-d-dsa" placeholder="ID já embutido no sistema"></div>
-        <div class="ff"><label>DGA — Guarda do Acervo</label><input id="cfg-d-dga" placeholder="ID já embutido no sistema"></div>
-        <div class="ff"><label>Declaração de 5 Anos</label><input id="cfg-d-5anos" placeholder="ID já embutido no sistema"></div>
-        <div class="ff"><label>Declaração de Residência</label><input id="cfg-d-res" placeholder="ID já embutido no sistema"></div>
-        <div class="ff"><label>Inexistência / Não Inquérito</label><input id="cfg-d-inex" placeholder="ID já embutido no sistema"></div>
-        <div class="ff"><label>Transferência de Propriedade</label><input id="cfg-d-transf" placeholder="Cole o ID aqui"></div>
-        <div class="ff"><label>Procuração</label><input id="cfg-d-proc" placeholder="Cole o ID aqui"></div>
-        <div class="ff"><label>Requerimento CR</label><input id="cfg-d-req-cr" placeholder="Cole o ID aqui"></div>
-        <div class="ff"><label>Requerimento Renovação</label><input id="cfg-d-req-ren" placeholder="Cole o ID aqui"></div>
+    <div class="box-hdr"><span class="box-title">&#128196; Templates de Declarações</span></div>
+    <div class="box-sub">IDs dos documentos Google Docs. Os 5 primeiros já estão embutidos.</div>
+    <div class="box-body">
+      <div class="form-2col">
+        <div class="fld"><label>DSA — Segurança do Acervo</label><input id="cfg-d-dsa" placeholder="ID embutido no código"></div>
+        <div class="fld"><label>DGA — Guarda do Acervo</label><input id="cfg-d-dga" placeholder="ID embutido no código"></div>
+        <div class="fld"><label>Declaração de 5 Anos</label><input id="cfg-d-5anos" placeholder="ID embutido no código"></div>
+        <div class="fld"><label>Declaração de Residência</label><input id="cfg-d-res" placeholder="ID embutido no código"></div>
+        <div class="fld"><label>Inexistência / Não Inquérito</label><input id="cfg-d-inex" placeholder="ID embutido no código"></div>
+        <div class="fld"><label>Transferência de Propriedade</label><input id="cfg-d-transf" placeholder="Cole o ID aqui"></div>
+        <div class="fld"><label>Procuração</label><input id="cfg-d-proc" placeholder="Cole o ID aqui"></div>
+        <div class="fld"><label>Requerimento CR</label><input id="cfg-d-req-cr" placeholder="Cole o ID aqui"></div>
+        <div class="fld"><label>Requerimento Renovação</label><input id="cfg-d-req-ren" placeholder="Cole o ID aqui"></div>
       </div>
-      <button class="btn-p" style="margin-top:12px" onclick="salvarDocIds()">&#128190; Salvar IDs</button>
+      <button class="btn-pri" style="margin-top:12px" onclick="salvarDocIds()">&#128190; Salvar IDs</button>
     </div>
   </div>
+
   <div class="box">
-    <div class="bx-h"><span class="bx-t">&#128295; Manutenção</span></div>
-    <div class="bx-b" style="display:flex;gap:10px;flex-wrap:wrap">
-      <button class="btn-s" onclick="limparLocal()">&#128465; Limpar Dados Locais</button>
-      <button class="btn-s" onclick="exportarBkp()">&#128229; Exportar Backup JSON</button>
+    <div class="box-hdr"><span class="box-title">&#128295; Manutenção</span></div>
+    <div class="box-body" style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn-warn" onclick="limparLocal()">&#128465; Limpar Dados Locais</button>
+      <button class="btn-sec" onclick="exportarBkp()">&#128229; Exportar Backup JSON</button>
     </div>
   </div>
 </div>
 
-</div><!-- /main -->
+</div><!-- /content -->
+</div><!-- /main-wrap -->
+</div><!-- /app -->
 
 <!-- MODAL PESSOA -->
-<div class="modal" id="m-pessoa">
-<div class="m-box">
-  <div class="m-h"><span class="m-t" id="m-ps-t">Nova Pessoa</span><button class="m-cls" onclick="fecharModal('m-pessoa')">&times;</button></div>
-  <div class="m-b">
-    <div class="sec">&#128100; Identificação</div>
-    <div class="fg">
-      <div class="ff fw"><label>Nome Completo *</label><input id="f-nome" placeholder="NOME COMPLETO" oninput="this.value=this.value.toUpperCase()"></div>
-      <div class="ff"><label>Tipo</label><select id="f-tipo"><option value="CTR">CTR — Clube de Tiro</option><option value="CH">CH — Cursos e Consultorias</option></select></div>
-      <div class="ff"><label>Status</label><select id="f-ativo"><option value="ativo">&#9989; Ativo</option><option value="inativo">&#10060; Inativo</option></select></div>
-      <div class="ff"><label>CPF</label><input id="f-cpf" placeholder="000.000.000-00"></div>
-      <div class="ff"><label>RG</label><input id="f-rg" placeholder="Número do RG"></div>
-      <div class="ff"><label>Órgão Expedidor</label><input id="f-orgao" placeholder="SSP/BA"></div>
-      <div class="ff"><label>Data Emissão RG</label><input id="f-rg-em" placeholder="DD/MM/AAAA"></div>
-      <div class="ff"><label>Data de Nascimento</label><input id="f-nasc" placeholder="DD/MM/AAAA"></div>
-      <div class="ff"><label>Naturalidade</label><input id="f-natural" placeholder="CIDADE/UF" oninput="this.value=this.value.toUpperCase()"></div>
-      <div class="ff"><label>Estado Civil</label><input id="f-civil" placeholder="Ex: SOLTEIRO, CASADA..." list="civil-opts" oninput="this.value=this.value.toUpperCase()"><datalist id="civil-opts"><option value="SOLTEIRO"><option value="SOLTEIRA"><option value="CASADO"><option value="CASADA"><option value="DIVORCIADO"><option value="DIVORCIADA"><option value="VIUVO"><option value="VIUVA"><option value="UNIAO ESTAVEL"></datalist></div>
-      <div class="ff"><label>Profissão</label><input id="f-prof" placeholder="Profissão" oninput="this.value=this.value.toUpperCase()"></div>
-      <div class="ff"><label>Título de Eleitor</label><input id="f-titulo" placeholder="Número"></div>
-    </div>
-    <div class="sec">&#128106; Filiação</div>
-    <div class="fg">
-      <div class="ff"><label>Nome do Pai</label><input id="f-pai" placeholder="NOME DO PAI" oninput="this.value=this.value.toUpperCase()"></div>
-      <div class="ff"><label>Nome da Mãe</label><input id="f-mae" placeholder="NOME DA MÃE" oninput="this.value=this.value.toUpperCase()"></div>
-    </div>
-    <div class="sec">&#128205; Contato e Endereço</div>
-    <div class="fg">
-      <div class="ff"><label>WhatsApp / Telefone</label><input id="f-tel" placeholder="(00) 00000-0000"></div>
-      <div class="ff"><label>E-mail</label><input id="f-email" placeholder="email@exemplo.com"></div>
-      <div class="ff fw"><label>Endereço Principal</label><input id="f-end" placeholder="Rua, número, bairro" oninput="this.value=this.value.toUpperCase()"></div>
-      <div class="ff"><label>Cidade/UF</label><input id="f-cidade" placeholder="CIDADE/UF" oninput="this.value=this.value.toUpperCase()"></div>
-      <div class="ff"><label>CEP</label><input id="f-cep" placeholder="00000-000"></div>
-      <div class="ff fw"><label>Endereço 2 (se houver)</label><input id="f-end2" placeholder="Segundo endereço" oninput="this.value=this.value.toUpperCase()"></div>
-      <div class="ff"><label>Cidade/UF 2</label><input id="f-cidade2" placeholder="CIDADE/UF"></div>
-      <div class="ff"><label>CEP 2</label><input id="f-cep2" placeholder="00000-000"></div>
-    </div>
-    <div class="sec">&#127968; Proprietário do Imóvel (se em nome de terceiro)</div>
-    <div class="fg">
-      <div class="ff fw"><label>Nome do Proprietário</label><input id="f-prop-nome" placeholder="NOME" oninput="this.value=this.value.toUpperCase()"></div>
-      <div class="ff"><label>CPF do Proprietário</label><input id="f-prop-cpf" placeholder="000.000.000-00"></div>
-      <div class="ff"><label>RG do Proprietário</label><input id="f-prop-rg" placeholder="Número"></div>
-      <div class="ff"><label>Órgão Expedidor Prop.</label><input id="f-prop-orgao" placeholder="SSP/BA"></div>
-    </div>
-    <div class="sec">&#128274; GOV.BR e Observações</div>
-    <div class="fg">
-      <div class="ff"><label>Senha GOV.BR</label><input id="f-gsenha" placeholder="Senha do GOV.BR"></div>
-      <div class="ff"><label>Observações</label><input id="f-obs" placeholder="Observações gerais"></div>
+<div class="modal-overlay" id="m-pessoa">
+<div class="modal-box">
+  <div class="modal-hdr"><span class="modal-title" id="m-ps-t">Nova Pessoa</span><button class="modal-cls" onclick="fecharModal('m-pessoa')">&times;</button></div>
+  <div class="modal-body">
+    <div class="form-2col">
+      <div class="form-sec">&#128100; Identificação</div>
+      <div class="fld fw"><label>Nome Completo *</label><input id="f-nome" placeholder="NOME COMPLETO" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="fld"><label>Tipo</label><select id="f-tipo"><option value="CTR">CTR — Clube de Tiro</option><option value="CH">CH — Cursos e Consultorias</option></select></div>
+      <div class="fld"><label>Status</label><select id="f-ativo"><option value="ativo">&#9989; Ativo</option><option value="inativo">&#10060; Inativo</option></select></div>
+      <div class="fld"><label>CPF</label><input id="f-cpf" placeholder="000.000.000-00"></div>
+      <div class="fld"><label>RG</label><input id="f-rg" placeholder="Número do RG"></div>
+      <div class="fld"><label>Órgão Expedidor</label><input id="f-orgao" placeholder="SSP/BA"></div>
+      <div class="fld"><label>Data Emissão RG</label><input id="f-rg-em" placeholder="DD/MM/AAAA"></div>
+      <div class="fld"><label>Data de Nascimento</label><input id="f-nasc" placeholder="DD/MM/AAAA"></div>
+      <div class="fld"><label>Naturalidade</label><input id="f-natural" placeholder="CIDADE/UF" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="fld"><label>Estado Civil</label><input id="f-civil" placeholder="Ex: SOLTEIRO, CASADA..." list="civil-opts" oninput="this.value=this.value.toUpperCase()"><datalist id="civil-opts"><option value="SOLTEIRO"><option value="SOLTEIRA"><option value="CASADO"><option value="CASADA"><option value="DIVORCIADO"><option value="DIVORCIADA"><option value="VIUVO"><option value="VIUVA"><option value="UNIAO ESTAVEL"></datalist></div>
+      <div class="fld"><label>Profissão</label><input id="f-prof" placeholder="Profissão" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="fld"><label>Título de Eleitor</label><input id="f-titulo" placeholder="Número"></div>
+      <div class="form-sec">&#128106; Filiação</div>
+      <div class="fld"><label>Nome do Pai</label><input id="f-pai" placeholder="NOME DO PAI" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="fld"><label>Nome da Mãe</label><input id="f-mae" placeholder="NOME DA MÃE" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="form-sec">&#128205; Contato e Endereço</div>
+      <div class="fld"><label>WhatsApp / Telefone</label><input id="f-tel" placeholder="(00) 00000-0000"></div>
+      <div class="fld"><label>E-mail</label><input id="f-email" placeholder="email@exemplo.com"></div>
+      <div class="fld fw"><label>Endereço Principal</label><input id="f-end" placeholder="Rua, número, bairro" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="fld"><label>Cidade/UF</label><input id="f-cidade" placeholder="CIDADE/UF" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="fld"><label>CEP</label><input id="f-cep" placeholder="00000-000"></div>
+      <div class="fld fw"><label>Endereço 2 (se houver)</label><input id="f-end2" placeholder="Segundo endereço" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="fld"><label>Cidade/UF 2</label><input id="f-cidade2" placeholder="CIDADE/UF"></div>
+      <div class="fld"><label>CEP 2</label><input id="f-cep2" placeholder="00000-000"></div>
+      <div class="form-sec">&#127968; Proprietário do Imóvel (se em nome de terceiro)</div>
+      <div class="fld fw"><label>Nome do Proprietário</label><input id="f-prop-nome" placeholder="NOME COMPLETO" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="fld"><label>CPF do Proprietário</label><input id="f-prop-cpf" placeholder="000.000.000-00"></div>
+      <div class="fld"><label>RG do Proprietário</label><input id="f-prop-rg" placeholder="Número"></div>
+      <div class="fld"><label>Órgão Expedidor Prop.</label><input id="f-prop-orgao" placeholder="SSP/BA"></div>
+      <div class="form-sec">&#128274; GOV.BR</div>
+      <div class="fld"><label>Senha GOV.BR</label><input id="f-gsenha" placeholder="Senha do GOV.BR"></div>
+      <div class="fld"><label>Observações</label><input id="f-obs" placeholder="Observações gerais"></div>
     </div>
   </div>
-  <div class="m-f">
-    <button class="btn-s" onclick="fecharModal('m-pessoa')">Cancelar</button>
-    <button class="btn-p" onclick="salvarPessoa()">&#128190; Salvar</button>
+  <div class="modal-footer">
+    <button class="btn-sec" onclick="fecharModal('m-pessoa')">Cancelar</button>
+    <button class="btn-pri" onclick="salvarPessoa()">&#128190; Salvar Pessoa</button>
   </div>
 </div>
 </div>
 
 <!-- MODAL PROCESSO -->
-<div class="modal" id="m-proc">
-<div class="m-box" style="max-width:500px">
-  <div class="m-h"><span class="m-t">Novo Processo</span><button class="m-cls" onclick="fecharModal('m-proc')">&times;</button></div>
-  <div class="m-b">
-    <div class="fg">
-      <div class="ff fw"><label>Tipo de Serviço *</label>
+<div class="modal-overlay" id="m-proc">
+<div class="modal-box" style="max-width:520px">
+  <div class="modal-hdr"><span class="modal-title">Novo Processo</span><button class="modal-cls" onclick="fecharModal('m-proc')">&times;</button></div>
+  <div class="modal-body">
+    <div class="form-2col">
+      <div class="fld fw"><label>Tipo de Serviço *</label>
         <select id="f-tipo-proc">
           <option value="CR">CR — Certificado de Registro</option>
           <option value="CRAF">CRAF — Certificado de Registro de Arma de Fogo</option>
           <option value="RCRAF">RCRAF — Renovação do CR</option>
           <option value="TRANSF">Transferência de Propriedade</option>
-          <option value="DSA">DSA — Declaração Segurança Acervo</option>
-          <option value="DGA">DGA — Declaração Guarda Acervo</option>
-          <option value="5ANOS">Declaração 5 Anos</option>
+          <option value="GT">GT — Guarda Temporária</option>
           <option value="PROC">Procuração</option>
           <option value="OUTRO">Outro</option>
         </select>
       </div>
-      <div class="ff fw"><label>Status</label>
+      <div class="fld fw"><label>Status</label>
         <select id="f-st-proc">
           <option value="aguardando_cli">Aguardando Documentação</option>
           <option value="em_execucao">Em Execução</option>
+          <option value="protocolar">A Protocolar</option>
           <option value="protocolado">Protocolado</option>
           <option value="em_analise">Em Análise</option>
           <option value="deferido">Deferido &#10003;</option>
           <option value="indeferido">Indeferido &#10007;</option>
         </select>
       </div>
-      <div class="ff"><label>Data de Início</label><input type="date" id="f-ini-proc"></div>
-      <div class="ff"><label>Data Protocolo</label><input type="date" id="f-prot-dt"></div>
-      <div class="ff"><label>GRU Comunicada?</label><select id="f-gru-com"><option value="">Não</option><option value="sim">Sim</option></select></div>
-      <div class="ff"><label>GRU Paga?</label><select id="f-gru-pg"><option value="">Não</option><option value="sim">Sim &#10003;</option></select></div>
-      <div class="ff"><label>Valor GRU (R$)</label><input id="f-gru-val" placeholder="Ex: 62.00" type="number" step="0.01"></div>
-      <div class="ff"><label>Data Pagamento</label><input type="date" id="f-gru-dt"></div>
-      <div class="ff fw"><label>Observação</label><input id="f-obs-proc" placeholder="Opcional"></div>
+      <div class="fld"><label>Data de Início</label><input type="date" id="f-ini-proc"></div>
+      <div class="fld"><label>Data Protocolo</label><input type="date" id="f-prot-dt"></div>
+      <div class="fld"><label>GRU Comunicada?</label><select id="f-gru-com"><option value="">Não</option><option value="sim">Sim</option></select></div>
+      <div class="fld"><label>GRU Paga?</label><select id="f-gru-pg"><option value="">Não</option><option value="sim">Sim &#10003;</option></select></div>
+      <div class="fld"><label>Valor GRU (R$)</label><input id="f-gru-val" placeholder="0.00" type="number" step="0.01" min="0"></div>
+      <div class="fld"><label>Data Pagamento GRU</label><input type="date" id="f-gru-dt"></div>
+      <div class="fld fw"><label>Observação</label><input id="f-obs-proc" placeholder="Observações do processo"></div>
     </div>
   </div>
-  <div class="m-f">
-    <button class="btn-s" onclick="fecharModal('m-proc')">Cancelar</button>
-    <button class="btn-p" onclick="salvarProc()">&#128190; Salvar</button>
+  <div class="modal-footer">
+    <button class="btn-sec" onclick="fecharModal('m-proc')">Cancelar</button>
+    <button class="btn-pri" onclick="salvarProc()">&#128190; Salvar</button>
   </div>
 </div>
 </div>
 
 <!-- MODAL ARMA -->
-<div class="modal" id="m-arma">
-<div class="m-box" style="max-width:480px">
-  <div class="m-h"><span class="m-t">Cadastrar Arma</span><button class="m-cls" onclick="fecharModal('m-arma')">&times;</button></div>
-  <div class="m-b">
-    <div class="fg">
-      <div class="ff fw"><label>Descrição da Arma *</label><input id="f-arma-desc" placeholder="Ex: Pistola Glock 17" oninput="this.value=this.value.toUpperCase()"></div>
-      <div class="ff"><label>Calibre</label><input id="f-arma-cal" placeholder="Ex: 9mm, .380, .40"></div>
-      <div class="ff"><label>Número de Série</label><input id="f-arma-serie" placeholder="Número de série"></div>
-      <div class="ff"><label>Marca / Fabricante</label><input id="f-arma-marca" placeholder="Ex: GLOCK, TAURUS"></div>
-      <div class="ff"><label>Modelo</label><input id="f-arma-modelo" placeholder="Ex: G17, G19, PT 24/7"></div>
-      <div class="ff"><label>Número do CR</label><input id="f-arma-cr" placeholder="Número do CR"></div>
-      <div class="ff"><label>Validade CR</label><input id="f-arma-cr-val" placeholder="DD/MM/AAAA"></div>
-      <div class="ff fw"><label>Observação</label><input id="f-arma-obs" placeholder="Opcional"></div>
+<div class="modal-overlay" id="m-arma">
+<div class="modal-box" style="max-width:500px">
+  <div class="modal-hdr"><span class="modal-title">&#128299; Cadastrar Arma</span><button class="modal-cls" onclick="fecharModal('m-arma')">&times;</button></div>
+  <div class="modal-body">
+    <div class="form-2col">
+      <div class="fld fw"><label>Descrição *</label><input id="f-arma-desc" placeholder="Ex: Pistola Glock 17" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="fld"><label>Calibre</label><input id="f-arma-cal" placeholder="Ex: 9mm, .380, .40"></div>
+      <div class="fld"><label>Número de Série</label><input id="f-arma-serie" placeholder="Número de série"></div>
+      <div class="fld"><label>Marca / Fabricante</label><input id="f-arma-marca" placeholder="Ex: GLOCK, TAURUS" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="fld"><label>Modelo</label><input id="f-arma-modelo" placeholder="Ex: G17, G19" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="fld"><label>Número do CR</label><input id="f-arma-cr" placeholder="CR da arma"></div>
+      <div class="fld"><label>Validade do CR</label><input id="f-arma-crval" placeholder="DD/MM/AAAA"></div>
+      <div class="fld fw"><label>Observação</label><input id="f-arma-obs" placeholder="Opcional"></div>
     </div>
   </div>
-  <div class="m-f">
-    <button class="btn-s" onclick="fecharModal('m-arma')">Cancelar</button>
-    <button class="btn-p" onclick="salvarArma()">&#128190; Salvar</button>
+  <div class="modal-footer">
+    <button class="btn-sec" onclick="fecharModal('m-arma')">Cancelar</button>
+    <button class="btn-pri" onclick="salvarArma()">&#128190; Salvar Arma</button>
   </div>
 </div>
 </div>
